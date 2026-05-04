@@ -1,0 +1,3089 @@
+p<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelp Health Simulator</title>
+  <!-- Run locally by opening this file in a browser. No build step or server is required. -->
+  <style>
+    :root {
+      --bg-deep: #06263a;
+      --bg-surface: rgba(7, 48, 67, 0.82);
+      --bg-panel: rgba(240, 251, 250, 0.1);
+      --line-soft: rgba(218, 246, 242, 0.16);
+      --text-main: #eefaf7;
+      --text-dim: #bdd8d4;
+      --accent-seafoam: #9de8cd;
+      --accent-kelp: #72c475;
+      --accent-sand: #f5d597;
+      --accent-warning: #f3b260;
+      --accent-danger: #ea7676;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 8px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at top, rgba(93, 176, 208, 0.24), transparent 30%),
+        linear-gradient(180deg, #0a3750 0%, #052637 38%, #031825 100%);
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      width: 42vw;
+      height: 42vw;
+      left: -10vw;
+      top: -8vw;
+      background: radial-gradient(circle, rgba(140, 216, 226, 0.16), transparent 68%);
+      filter: blur(10px);
+    }
+
+    body::after {
+      width: 44vw;
+      height: 44vw;
+      right: -12vw;
+      bottom: -18vw;
+      background: radial-gradient(circle, rgba(255, 214, 151, 0.1), transparent 62%);
+      filter: blur(14px);
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1440px, 100%);
+      min-height: calc(100vh - 16px);
+      margin: 0 auto;
+      padding: 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(5, 37, 53, 0.9), rgba(5, 29, 42, 0.82));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .title-block,
+    .info-card,
+    .sim-card,
+    .controls-card {
+      border: 1px solid var(--line-soft);
+      background: var(--bg-surface);
+      border-radius: 24px;
+      overflow: hidden;
+    }
+
+    .title-block {
+      padding: 18px 20px;
+      background:
+        linear-gradient(135deg, rgba(117, 194, 164, 0.16), transparent 55%),
+        linear-gradient(180deg, rgba(11, 61, 82, 0.92), rgba(6, 34, 49, 0.92));
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(157, 232, 205, 0.28);
+      color: var(--accent-seafoam);
+      background: rgba(157, 232, 205, 0.08);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 12px 0 8px;
+      font-size: clamp(2rem, 3.8vw, 3.4rem);
+      line-height: 0.95;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      max-width: 42rem;
+      margin: 0;
+      color: var(--text-dim);
+      line-height: 1.45;
+      font-size: 0.96rem;
+    }
+
+    .info-card {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      background:
+        linear-gradient(180deg, rgba(8, 57, 78, 0.9), rgba(8, 37, 53, 0.9));
+    }
+
+    .label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.74rem;
+      color: var(--accent-sand);
+    }
+
+    .score-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .score-value {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      font-weight: 700;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      min-width: 134px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #082732;
+      background: var(--accent-seafoam);
+    }
+
+    .meter {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f27e72 0%, #f5ce6f 45%, #82d588 100%);
+      transition: width 250ms ease;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .summary-tile {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .summary-tile strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1rem;
+    }
+
+    .game-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .game-stat {
+      padding: 12px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .game-stat strong {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .game-stat small {
+      display: block;
+      margin-top: 4px;
+      color: var(--text-dim);
+      font-size: 0.84rem;
+    }
+
+    .active-event-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(242, 166, 134, 0.18), rgba(255, 255, 255, 0.04));
+      border: 1px solid rgba(241, 166, 134, 0.2);
+    }
+
+    .active-event-card.muted {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .active-event-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .active-event-title strong {
+      font-size: 1.08rem;
+    }
+
+    .active-event-title span {
+      color: var(--accent-sand);
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .event-banner {
+      margin-top: 4px;
+      padding: 14px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(241, 166, 134, 0.24);
+      background:
+        linear-gradient(135deg, rgba(241, 166, 134, 0.18), rgba(255, 255, 255, 0.05)),
+        rgba(10, 44, 60, 0.94);
+      box-shadow: 0 24px 44px rgba(0, 0, 0, 0.22);
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      align-items: center;
+      transform-origin: top center;
+      transition: transform 260ms ease, opacity 260ms ease, max-height 260ms ease, margin 260ms ease, padding 260ms ease;
+      max-height: 180px;
+      overflow: hidden;
+    }
+
+    .event-banner.compact {
+      opacity: 0;
+      transform: scale(0.97) translateY(-6px);
+      max-height: 0;
+      margin-top: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
+    }
+
+    .event-banner h3 {
+      margin: 0 0 8px;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+    }
+
+    .event-banner p {
+      margin: 0;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .event-range {
+      justify-self: end;
+      min-width: 200px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .event-range strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.6rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .round-overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(2, 16, 25, 0.74);
+      backdrop-filter: blur(10px);
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+    }
+
+    .round-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .round-panel {
+      width: min(520px, 100%);
+      padding: 28px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(9, 55, 76, 0.96), rgba(6, 31, 46, 0.96));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .round-panel h3 {
+      margin: 8px 0 10px;
+      font-size: 2rem;
+    }
+
+    .round-panel p {
+      margin: 0;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.78fr);
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .sim-card {
+      position: relative;
+      min-height: clamp(620px, 74vh, 920px);
+      background:
+        linear-gradient(180deg, rgba(12, 76, 102, 0.92) 0%, rgba(4, 31, 46, 0.96) 100%);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .sim-header,
+    .controls-header {
+      padding: 14px 16px 0;
+    }
+
+    .sim-stage {
+      position: relative;
+      height: min(72vh, 820px);
+      min-height: 520px;
+      margin: 10px 12px 8px;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, rgba(180, 228, 207, 0.22), transparent 26%),
+        linear-gradient(180deg, rgba(110, 194, 215, 0.24), transparent 30%),
+        linear-gradient(180deg, rgba(6, 67, 95, 0.72) 0%, rgba(6, 45, 64, 0.92) 48%, rgba(3, 24, 34, 1) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: filter 500ms ease, background 500ms ease, box-shadow 500ms ease;
+    }
+
+    .water-overlay,
+    .event-overlay,
+    .thermal-overlay,
+    .nutrient-overlay,
+    .shimmer-overlay,
+    .pollution-overlay,
+    .storm-overlay,
+    .placeholder-visual {
+      position: absolute;
+      inset: 0;
+    }
+
+    .water-overlay {
+      background:
+        repeating-linear-gradient(
+          110deg,
+          rgba(255, 255, 255, 0.08) 0 2px,
+          transparent 2px 38px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.22;
+      animation: currentShift 18s linear infinite;
+    }
+
+    .event-overlay,
+    .thermal-overlay,
+    .nutrient-overlay,
+    .shimmer-overlay {
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 450ms ease, background 450ms ease, filter 450ms ease;
+    }
+
+    .event-overlay {
+      z-index: 1;
+      background:
+        radial-gradient(circle at 50% 16%, rgba(255, 244, 205, 0.14), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+      mix-blend-mode: screen;
+    }
+
+    .thermal-overlay {
+      z-index: 2;
+      background: linear-gradient(180deg, rgba(255, 120, 85, 0.1), rgba(22, 89, 146, 0.06));
+      mix-blend-mode: screen;
+    }
+
+    .nutrient-overlay {
+      z-index: 2;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(102, 244, 178, 0.18), transparent 28%),
+        radial-gradient(circle at 70% 58%, rgba(120, 219, 255, 0.12), transparent 26%);
+      mix-blend-mode: screen;
+    }
+
+    .shimmer-overlay {
+      z-index: 3;
+      background:
+        repeating-linear-gradient(
+          100deg,
+          rgba(255, 255, 255, 0) 0 12px,
+          rgba(255, 255, 255, 0.08) 12px 18px,
+          rgba(255, 255, 255, 0) 18px 34px
+        );
+      transform: translateX(-12%);
+    }
+
+    .shimmer-overlay.active {
+      animation: shimmerDrift 2.2s linear infinite;
+    }
+
+    .sunbeam {
+      position: absolute;
+      top: -10%;
+      width: 20%;
+      height: 60%;
+      background: linear-gradient(180deg, rgba(245, 226, 171, 0.35), transparent 80%);
+      filter: blur(4px);
+      transform: skewX(-16deg);
+      opacity: 0.22;
+      transition: opacity 180ms ease;
+    }
+
+    .sunbeam.one { left: 8%; }
+    .sunbeam.two { left: 34%; }
+    .sunbeam.three { left: 60%; }
+
+    .bubble-layer {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: -40px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(236, 250, 255, 0.24);
+      animation: rise linear infinite;
+    }
+
+    .kelp-bed {
+      position: absolute;
+      inset: auto 0 0;
+      height: 27%;
+      background:
+        radial-gradient(circle at 50% 10%, rgba(247, 215, 154, 0.35), transparent 28%),
+        linear-gradient(180deg, rgba(44, 62, 50, 0.4), rgba(30, 41, 34, 0.92));
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .kelp-bed::before,
+    .kelp-bed::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      width: 42%;
+      height: 65%;
+      border-radius: 50%;
+      background: rgba(18, 30, 24, 0.5);
+      filter: blur(14px);
+    }
+
+    .kelp-bed::before { left: -4%; }
+    .kelp-bed::after { right: -6%; }
+
+    .placeholder-visual {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      pointer-events: none;
+      transition: opacity 200ms ease;
+    }
+
+    .kelp-cluster {
+      position: relative;
+      width: min(76%, 560px);
+      height: 88%;
+      transform-origin: bottom center;
+      /* Smooth transitions for health-state changes */
+      transition: filter 600ms ease, transform 600ms ease, opacity 600ms ease;
+    }
+
+    .kelp-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* ── KELP GROUP BASE ──────────────────────────────────────────────────────
+       Each kelp group uses its own animation duration + delay to desync motion,
+       creating a natural underwater-current feel. transform-origin at bottom
+       makes them pivot at the holdfast like real kelp. */
+    .kelp-group {
+      transform-box: fill-box;
+      transform-origin: bottom center;
+      animation: swayHealthy 5.2s ease-in-out infinite;
+      /* Smooth droop transitions when health state changes */
+      transition: transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Background kelp layers – slightly blurred and dimmer for depth */
+    .kelp-group.back {
+      opacity: 0.62;
+      filter: blur(0.8px) saturate(0.85);
+    }
+
+    /* Staggered timing per stalk so they never move in lockstep */
+    .kelp-group.g1 { animation-duration: 5.8s;  animation-delay: -0.7s; }
+    .kelp-group.g2 { animation-duration: 4.6s;  animation-delay: -1.9s; }
+    .kelp-group.g3 { animation-duration: 6.2s;  animation-delay: -0.4s; }
+    .kelp-group.g4 { animation-duration: 5.0s;  animation-delay: -2.6s; }
+    .kelp-group.g5 { animation-duration: 4.4s;  animation-delay: -1.1s; }
+    .kelp-group.g6 { animation-duration: 5.5s;  animation-delay: -3.2s; }
+    .kelp-group.g7 { animation-duration: 6.8s;  animation-delay: -0.9s; }
+
+    /* Blade tips – secondary motion that lags behind the stalk */
+    .blade-tip {
+      transform-box: fill-box;
+      transform-origin: bottom center;
+      animation: tipLag 5.2s ease-in-out infinite;
+    }
+    .kelp-group.g1 .blade-tip { animation-duration: 5.8s;  animation-delay: -0.3s; }
+    .kelp-group.g2 .blade-tip { animation-duration: 4.6s;  animation-delay: -1.4s; }
+    .kelp-group.g3 .blade-tip { animation-duration: 6.2s;  animation-delay: -0.1s; }
+    .kelp-group.g4 .blade-tip { animation-duration: 5.0s;  animation-delay: -2.2s; }
+    .kelp-group.g5 .blade-tip { animation-duration: 4.4s;  animation-delay: -0.7s; }
+    .kelp-group.g6 .blade-tip { animation-duration: 5.5s;  animation-delay: -2.8s; }
+    .kelp-group.g7 .blade-tip { animation-duration: 6.8s;  animation-delay: -0.5s; }
+
+    /* ── HEALTH STATE OVERRIDES ───────────────────────────────────────────────
+       Three CSS classes applied to .kelp-cluster by JS to switch animation modes.
+       Avoids abrupt jumps by using transition on animation-duration-property. */
+
+    /* HEALTHY: Strong upright sway, fast, slight upward drift */
+    .kelp-cluster.state-healthy .kelp-group {
+      animation-name: swayHealthy;
+      animation-play-state: running;
+    }
+    .kelp-cluster.state-healthy .kelp-group.g1 { animation-duration: 5.8s; }
+    .kelp-cluster.state-healthy .kelp-group.g2 { animation-duration: 4.6s; }
+    .kelp-cluster.state-healthy .kelp-group.g3 { animation-duration: 6.2s; }
+    .kelp-cluster.state-healthy .kelp-group.g4 { animation-duration: 5.0s; }
+    .kelp-cluster.state-healthy .kelp-group.g5 { animation-duration: 4.4s; }
+    .kelp-cluster.state-healthy .kelp-group.g6 { animation-duration: 5.5s; }
+    .kelp-cluster.state-healthy .kelp-group.g7 { animation-duration: 6.8s; }
+
+    /* STRESSED: Slower, drooping, weaker amplitude */
+    .kelp-cluster.state-stressed .kelp-group {
+      animation-name: swayStressed;
+    }
+    .kelp-cluster.state-stressed .kelp-group.g1 { animation-duration: 9.2s; }
+    .kelp-cluster.state-stressed .kelp-group.g2 { animation-duration: 7.8s; }
+    .kelp-cluster.state-stressed .kelp-group.g3 { animation-duration: 10.4s; }
+    .kelp-cluster.state-stressed .kelp-group.g4 { animation-duration: 8.5s; }
+    .kelp-cluster.state-stressed .kelp-group.g5 { animation-duration: 7.2s; }
+    .kelp-cluster.state-stressed .kelp-group.g6 { animation-duration: 9.8s; }
+    .kelp-cluster.state-stressed .kelp-group.g7 { animation-duration: 11.0s; }
+
+    /* DECAYING: Very slow, heavy droop, near-collapse posture */
+    .kelp-cluster.state-decaying .kelp-group {
+      animation-name: swayDecaying;
+    }
+    .kelp-cluster.state-decaying .kelp-group.g1 { animation-duration: 14s; }
+    .kelp-cluster.state-decaying .kelp-group.g2 { animation-duration: 12s; }
+    .kelp-cluster.state-decaying .kelp-group.g3 { animation-duration: 16s; }
+    .kelp-cluster.state-decaying .kelp-group.g4 { animation-duration: 13s; }
+    .kelp-cluster.state-decaying .kelp-group.g5 { animation-duration: 11s; }
+    .kelp-cluster.state-decaying .kelp-group.g6 { animation-duration: 15s; }
+    .kelp-cluster.state-decaying .kelp-group.g7 { animation-duration: 17s; }
+
+    /* Healthy glow pulse on the whole cluster */
+    .kelp-cluster.state-healthy {
+      animation: healthGlow 4s ease-in-out infinite;
+    }
+
+    /* ── FILL STYLES ─────────────────────────────────────────────────────── */
+    .stipe {
+      fill: url(#stipeGradient);
+    }
+
+    .blade-main {
+      fill: url(#bladeGradient);
+      stroke: rgba(210, 255, 214, 0.15);
+      stroke-width: 0.9;
+    }
+
+    .blade-wide {
+      fill: url(#bladeGradient2);
+      stroke: rgba(200, 255, 210, 0.12);
+      stroke-width: 0.8;
+    }
+
+    .blade-shadow {
+      fill: rgba(10, 50, 29, 0.22);
+    }
+
+    .blade-highlight {
+      fill: rgba(181, 255, 196, 0.16);
+    }
+
+    .blade-vein {
+      stroke: rgba(120, 210, 140, 0.28);
+      stroke-width: 0.8;
+      fill: none;
+    }
+
+    .holdfast {
+      fill: url(#holdfastGradient);
+    }
+
+    .holdfast-shadow {
+      fill: rgba(0, 0, 0, 0.35);
+      filter: blur(3px);
+    }
+
+    .pollution-overlay {
+      background:
+        radial-gradient(circle at 35% 44%, rgba(106, 80, 54, 0.34), transparent 20%),
+        radial-gradient(circle at 70% 64%, rgba(59, 62, 77, 0.46), transparent 22%),
+        linear-gradient(180deg, rgba(50, 46, 43, 0.06), rgba(20, 19, 18, 0.5));
+      opacity: 0;
+      mix-blend-mode: multiply;
+      transition: opacity 180ms ease;
+      z-index: 5;
+    }
+
+    .storm-overlay {
+      background:
+        linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.15) 47%, transparent 53%),
+        linear-gradient(180deg, rgba(224, 239, 247, 0.06), rgba(18, 32, 49, 0.26));
+      opacity: 0;
+      transform: translateX(-18%);
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .sim-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 16px 14px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .state-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .state-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-seafoam);
+      box-shadow: 0 0 0 6px rgba(157, 232, 205, 0.12);
+    }
+
+    .controls-card {
+      padding-bottom: 12px;
+      background:
+        linear-gradient(180deg, rgba(8, 55, 76, 0.9), rgba(5, 33, 46, 0.94));
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+      max-height: min(78vh, 980px);
+      overflow: auto;
+    }
+
+    .instructions {
+      margin: 10px 16px 0;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+      line-height: 1.45;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .control-group {
+      margin: 12px 16px 0;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .group-title {
+      margin: 0 0 12px;
+      font-size: 1rem;
+    }
+
+    .range-control {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      --status-color: var(--accent-seafoam);
+      --range-start: 25%;
+      --range-end: 75%;
+      --value-pos: 50%;
+    }
+
+    .range-control.too-low {
+      --status-color: var(--accent-warning);
+    }
+
+    .range-control.in-range {
+      --status-color: var(--accent-seafoam);
+    }
+
+    .range-control.too-high {
+      --status-color: #f3a298;
+    }
+
+    .range-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .range-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .range-title strong {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .range-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .value-badge,
+    .range-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--text-main);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .value-badge {
+      color: var(--status-color);
+      border-color: color-mix(in srgb, var(--status-color) 30%, transparent);
+      background: color-mix(in srgb, var(--status-color) 12%, rgba(0, 0, 0, 0.16));
+    }
+
+    .range-shell {
+      position: relative;
+      display: grid;
+      gap: 8px;
+    }
+
+    .range-hints {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .range-hints span:nth-child(2) {
+      text-align: center;
+      color: var(--accent-seafoam);
+    }
+
+    .range-hints span:last-child {
+      text-align: right;
+    }
+
+    .dual-range {
+      position: relative;
+      height: 54px;
+    }
+
+    .track-base,
+    .track-ideal,
+    .track-value {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 24px;
+      border-radius: 999px;
+    }
+
+    .track-base {
+      height: 10px;
+      background: linear-gradient(90deg, rgba(240, 137, 111, 0.72), rgba(244, 214, 116, 0.72) 22%, rgba(121, 211, 144, 0.2) 50%, rgba(244, 214, 116, 0.72) 78%, rgba(240, 137, 111, 0.72));
+      opacity: 0.4;
+    }
+
+    .track-ideal {
+      height: 14px;
+      top: 22px;
+      left: var(--range-start);
+      right: calc(100% - var(--range-end));
+      background: linear-gradient(90deg, rgba(125, 222, 142, 0.85), rgba(178, 240, 170, 0.92));
+      box-shadow: 0 0 0 1px rgba(188, 247, 180, 0.22), 0 0 18px rgba(125, 222, 142, 0.18);
+    }
+
+    .track-value {
+      width: 18px;
+      height: 18px;
+      left: calc(var(--value-pos) - 9px);
+      right: auto;
+      top: 20px;
+      background: var(--status-color);
+      border: 3px solid rgba(5, 30, 42, 0.92);
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--status-color) 18%, transparent);
+      transition: left 140ms ease, background 140ms ease, box-shadow 140ms ease;
+    }
+
+    .range-input {
+      -webkit-appearance: none;
+      appearance: none;
+      position: absolute;
+      left: 0;
+      top: 18px;
+      width: 100%;
+      height: 22px;
+      background: none;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    .range-input::-webkit-slider-runnable-track {
+      height: 22px;
+      background: none;
+    }
+
+    .range-input::-moz-range-track {
+      height: 22px;
+      background: none;
+    }
+
+    .range-input.current {
+      pointer-events: none;
+    }
+
+    .range-input.current::-webkit-slider-thumb,
+    .range-input.current::-moz-range-thumb {
+      pointer-events: auto;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 3px solid rgba(5, 30, 42, 0.92);
+      background: var(--status-color);
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--status-color) 16%, transparent);
+      cursor: pointer;
+    }
+
+    .range-input.bound {
+      pointer-events: none;
+    }
+
+    .range-input.bound::-webkit-slider-thumb,
+    .range-input.bound::-moz-range-thumb {
+      pointer-events: auto;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 28px;
+      border-radius: 10px;
+      border: 2px solid rgba(5, 30, 42, 0.92);
+      background: #f5d597;
+      box-shadow: 0 0 0 4px rgba(245, 213, 151, 0.12);
+      cursor: ew-resize;
+    }
+
+    .range-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    .button-row,
+    .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button,
+    .chip-button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 16px;
+      font: inherit;
+      cursor: pointer;
+      color: #062533;
+      background: var(--accent-seafoam);
+      transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+    }
+
+    button:hover,
+    .chip-button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .danger {
+      background: #f1a686;
+      color: #3b160a;
+    }
+
+    .toggle-chip {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle-chip.active {
+      background: rgba(157, 232, 205, 0.18);
+      color: var(--accent-seafoam);
+      border-color: rgba(157, 232, 205, 0.3);
+    }
+
+    .toggle-chip:disabled,
+    button:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .simulated-serial {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 108px;
+      resize: vertical;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.16);
+      color: var(--text-main);
+      padding: 14px;
+      font: 0.95rem/1.45 "Courier New", monospace;
+    }
+
+    .helper-text {
+      margin: 0;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .mode-panel {
+      display: none;
+    }
+
+    .mode-panel.active {
+      display: block;
+    }
+
+    .serial-log {
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(2, 18, 25, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+      font-family: "Courier New", monospace;
+      font-size: 0.88rem;
+    }
+
+    .hardware-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+      font-size: 0.88rem;
+    }
+
+    .hardware-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+    }
+
+    .hardware-pill.connected {
+      color: var(--accent-seafoam);
+      border-color: rgba(157, 232, 205, 0.24);
+      background: rgba(157, 232, 205, 0.08);
+    }
+
+    .mode-panel.readonly .range-control {
+      opacity: 0.78;
+    }
+
+    .mode-panel.readonly .range-input.current {
+      pointer-events: none;
+    }
+
+    .storming .storm-overlay {
+      animation: stormFlash 800ms ease-in-out 3;
+    }
+
+    /* Storm shake now targets all kelp groups individually for more chaos */
+    .storming .kelp-cluster {
+      animation: stressShake 300ms ease-in-out 6;
+    }
+
+    /* ── KEYFRAME ANIMATIONS ─────────────────────────────────────────────────
+
+       swayHealthy: Wide arc with slight vertical drift — vigorous, alive feel.
+       Mimics a kelp frond in a moderate current with upward buoyancy.        */
+    @keyframes swayHealthy {
+      0%   { transform: rotate(-5deg) translateY(0px)   skewX(0deg); }
+      20%  { transform: rotate(-2deg) translateY(-8px)  skewX(0.5deg); }
+      50%  { transform: rotate(6deg)  translateY(-14px) skewX(-1deg); }
+      78%  { transform: rotate(3deg)  translateY(-6px)  skewX(0.3deg); }
+      100% { transform: rotate(-5deg) translateY(0px)   skewX(0deg); }
+    }
+
+    /* swayStressed: Narrower arc, forward slump, minimal vertical rise.
+       Kelp has lost buoyancy — it droops and barely responds to current.     */
+    @keyframes swayStressed {
+      0%   { transform: rotate(-2deg) translateY(6px)  skewX(0deg); }
+      40%  { transform: rotate(2deg)  translateY(4px)  skewX(0.5deg); }
+      70%  { transform: rotate(-1deg) translateY(8px)  skewX(-0.3deg); }
+      100% { transform: rotate(-2deg) translateY(6px)  skewX(0deg); }
+    }
+
+    /* swayDecaying: Almost no sway — just a slow heavy lean.
+       The frond is nearly limp; only faint micro-oscillation remains.        */
+    @keyframes swayDecaying {
+      0%   { transform: rotate(4deg)  translateY(16px) skewX(0deg); }
+      45%  { transform: rotate(6deg)  translateY(18px) skewX(0.8deg); }
+      100% { transform: rotate(4deg)  translateY(16px) skewX(0deg); }
+    }
+
+    /* tipLag: Secondary micro-motion for blade tips — intentionally offset
+       to mimic the elastic lag of flexible frond ends in current.            */
+    @keyframes tipLag {
+      0%   { transform: rotate(-4deg) translateY(-2px); }
+      30%  { transform: rotate(-1deg) translateY(-5px); }
+      60%  { transform: rotate(5deg)  translateY(-8px); }
+      85%  { transform: rotate(2deg)  translateY(-3px); }
+      100% { transform: rotate(-4deg) translateY(-2px); }
+    }
+
+    /* healthGlow: Subtle brightness pulse for the healthy state cluster */
+    @keyframes healthGlow {
+      0%, 100% { filter: brightness(1) drop-shadow(0 0 0px rgba(120,255,160,0)); }
+      50%       { filter: brightness(1.06) drop-shadow(0 0 10px rgba(100,230,140,0.18)); }
+    }
+
+    @keyframes rise {
+      0% {
+        transform: translateY(0) scale(0.8);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-560px) scale(1.25);
+        opacity: 0;
+      }
+    }
+
+    @keyframes currentShift {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(56px); }
+    }
+
+    @keyframes shimmerDrift {
+      0% { transform: translateX(-16%) skewX(-8deg); opacity: 0.1; }
+      50% { opacity: 0.24; }
+      100% { transform: translateX(18%) skewX(-8deg); opacity: 0.08; }
+    }
+
+    @keyframes stormFlash {
+      0%, 100% {
+        opacity: 0;
+        transform: translateX(-18%);
+      }
+      20%,
+      60% {
+        opacity: 0.7;
+        transform: translateX(6%);
+      }
+      40%,
+      80% {
+        opacity: 0.16;
+        transform: translateX(18%);
+      }
+    }
+
+    @keyframes stressShake {
+      0%, 100% { transform: rotate(0deg) translateX(0); }
+      25% { transform: rotate(-2deg) translateX(-3px); }
+      50% { transform: rotate(2deg) translateX(4px); }
+      75% { transform: rotate(-1deg) translateX(-2px); }
+    }
+
+    @media (max-width: 1024px) {
+      body {
+        padding: 6px;
+      }
+
+      .hero,
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-shell {
+        min-height: calc(100vh - 12px);
+      }
+
+      .controls-card {
+        max-height: none;
+        overflow: visible;
+      }
+
+      .sim-card {
+        min-height: auto;
+      }
+
+      .sim-stage {
+        height: min(68vh, 760px);
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 700px) {
+      .app-shell {
+        width: 100%;
+        min-height: calc(100vh - 12px);
+        padding: 10px;
+        border-radius: 20px;
+      }
+
+      .title-block,
+      .info-card,
+      .sim-card,
+      .controls-card {
+        border-radius: 18px;
+      }
+
+      .sim-stage {
+        height: min(58vh, 560px);
+        min-height: 360px;
+        margin: 8px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .game-strip,
+      .event-banner {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row,
+      .mode-row {
+        flex-direction: column;
+      }
+
+      button,
+      .chip-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <article class="title-block">
+        <div class="eyebrow">Single-page classroom prototype</div>
+        <h1>Kelp Health Simulator</h1>
+        <p class="subtitle">
+          Explore how environmental conditions influence kelp health in real time.
+          This prototype separates the visual layer from the simulation logic so it can later connect to live microcontroller input.
+        </p>
+      </article>
+
+      <aside class="info-card">
+        <div class="score-row">
+          <div class="label">Live health score</div>
+          <div class="score-value">
+            <span id="healthScore">92</span>
+            <span style="font-size:1rem;color:var(--text-dim);font-weight:400;">/ 100</span>
+          </div>
+          <div class="status-pill" id="statusPill">Thriving</div>
+          <div class="meter" aria-hidden="true">
+            <div class="meter-fill" id="meterFill"></div>
+          </div>
+        </div>
+
+        <div class="game-strip">
+          <div class="game-stat">
+            <span class="label">Thrive score</span>
+            <strong id="thriveScore">0</strong>
+            <small id="scoreRate">Hold healthy conditions to build points.</small>
+          </div>
+          <div class="game-stat">
+            <span class="label">Time left</span>
+            <strong id="roundTimer">3:00</strong>
+            <small>Round ends when the timer hits zero.</small>
+          </div>
+          <div class="game-stat">
+            <span class="label">Combo</span>
+            <strong id="comboValue">x1.0</strong>
+            <small id="comboNote">Keep the kelp thriving to boost scoring.</small>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-tile">
+            <span class="label">Mode</span>
+            <strong id="modeReadout">Manual controls</strong>
+          </div>
+          <div class="summary-tile">
+            <span class="label">Event cycle</span>
+            <strong id="visualReadout">Waiting</strong>
+          </div>
+          <div class="summary-tile">
+            <span class="label">State</span>
+            <strong id="stateReadout">Healthy</strong>
+          </div>
+        </div>
+
+        <div class="active-event-card muted" id="activeEventCard">
+          <div class="active-event-title">
+            <strong id="activeEventName">No sudden event active</strong>
+            <span id="activeEventFactor">Standby</span>
+          </div>
+          <p class="helper-text" id="activeEventText">
+            The ocean is stable for now. Keep each current value inside its green target band.
+          </p>
+          <p class="helper-text" id="activeEventRange">
+            Next surprise event will adjust one category’s optimal range.
+          </p>
+        </div>
+
+        <p class="helper-text" id="eventReadout">
+          Conditions are balanced. The kelp is currently in a strong growth range.
+        </p>
+      </aside>
+    </section>
+
+    <section class="event-banner compact" id="eventBanner" aria-live="polite">
+      <div>
+        <div class="label">Sudden Event</div>
+        <h3 id="eventBannerName">Ocean conditions are stable.</h3>
+        <p id="eventBannerText">
+          Stay alert. A sudden event will soon change one category’s target range.
+        </p>
+      </div>
+      <div class="event-range">
+        <div class="label">Updated target</div>
+        <strong id="eventBannerRange">Waiting</strong>
+        <p class="helper-text" id="eventBannerTimer">Next event incoming.</p>
+      </div>
+    </section>
+
+    <section class="main-grid">
+      <article class="sim-card">
+        <div class="sim-header">
+          <div class="label">Simulation area</div>
+          <h2 style="margin:8px 0 0;font-size:1.4rem;">Reactive kelp visual</h2>
+        </div>
+
+        <div class="sim-stage" id="simStage">
+          <div class="water-overlay"></div>
+          <div class="event-overlay" id="eventOverlay"></div>
+          <div class="thermal-overlay" id="thermalOverlay"></div>
+          <div class="nutrient-overlay" id="nutrientOverlay"></div>
+          <div class="shimmer-overlay" id="shimmerOverlay"></div>
+          <div class="sunbeam one"></div>
+          <div class="sunbeam two"></div>
+          <div class="sunbeam three"></div>
+          <div class="bubble-layer" id="bubbleLayer"></div>
+
+          <div class="placeholder-visual" id="placeholderVisual">
+            <div class="kelp-cluster" id="kelpCluster" aria-label="Kelp visual placeholder">
+              <!-- Enhanced organic kelp SVG — 7 stalks across 3 depth layers.
+                   Background (back class): softer, blurred, partially visible.
+                   Midground: main display stalks with full detail.
+                   Each stalk has: holdfast shadow, holdfast, stipe, blades,
+                   highlights, veins, and blade-tip groups for secondary motion. -->
+              <svg class="kelp-svg" viewBox="0 0 660 560" role="img" aria-hidden="true">
+                <defs>
+                  <!-- Stipe: dark rich green stem -->
+                  <linearGradient id="stipeGradient" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stop-color="#1e4220"></stop>
+                    <stop offset="42%" stop-color="#2e5c2c"></stop>
+                    <stop offset="100%" stop-color="#163418"></stop>
+                  </linearGradient>
+
+                  <!-- Main blade: vivid yellow-green to deep sea-green -->
+                  <linearGradient id="bladeGradient" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#9cda72"></stop>
+                    <stop offset="30%" stop-color="#6ab84e"></stop>
+                    <stop offset="75%" stop-color="#3d7840"></stop>
+                    <stop offset="100%" stop-color="#244d2a"></stop>
+                  </linearGradient>
+
+                  <!-- Secondary blade: slightly different hue for variety -->
+                  <linearGradient id="bladeGradient2" x1="1" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#86d462"></stop>
+                    <stop offset="40%" stop-color="#559e46"></stop>
+                    <stop offset="100%" stop-color="#2a5432"></stop>
+                  </linearGradient>
+
+                  <!-- Holdfast base gradient -->
+                  <radialGradient id="holdfastGradient" cx="50%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#4a3620"></stop>
+                    <stop offset="100%" stop-color="#1e1408"></stop>
+                  </radialGradient>
+
+                  <!-- Subtle glow filter for healthy state -->
+                  <filter id="kelpGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                  </filter>
+                </defs>
+
+                <!-- ═══ LAYER 1: FAR BACKGROUND ══════════════════════════════ -->
+
+                <!-- Stalk BG-A: far-left background stalk, narrow and dim -->
+                <g class="kelp-group back g6">
+                  <ellipse class="holdfast-shadow" cx="66" cy="526" rx="22" ry="10"></ellipse>
+                  <ellipse class="holdfast" cx="66" cy="520" rx="20" ry="12"></ellipse>
+                  <path class="stipe" d="M59 520 C56 462,54 378,60 290 C64 226,76 178,90 148 L104 154 C92 184,82 232,78 294 C72 384,72 462,78 520 Z"></path>
+                  <path class="blade-main" d="M92 158 C70 174,48 216,44 272 C40 330,54 392,74 460 C90 424,106 376,118 316 C128 268,130 214,120 178 C114 162,104 154,92 158 Z"></path>
+                  <path class="blade-shadow" d="M88 182 C70 208,60 256,58 306 C56 354,66 398,78 440 C92 402,104 360,110 308 C116 270,116 220,108 190 Z"></path>
+                  <path class="blade-highlight" d="M82 174 C68 196,60 228,60 268 C68 240,82 208,98 184 C93 176,88 173,82 174 Z"></path>
+                </g>
+
+                <!-- Stalk BG-B: far-right background stalk -->
+                <g class="kelp-group back g7">
+                  <ellipse class="holdfast-shadow" cx="596" cy="524" rx="20" ry="10"></ellipse>
+                  <ellipse class="holdfast" cx="596" cy="518" rx="18" ry="11"></ellipse>
+                  <path class="stipe" d="M589 518 C584 466,582 396,586 330 C590 272,600 228,614 192 L628 198 C616 234,608 278,606 336 C602 402,602 464,608 518 Z"></path>
+                  <path class="blade-main" d="M616 202 C592 216,566 252,558 300 C550 350,558 406,578 468 C598 434,614 386,628 328 C638 288,640 242,632 214 C628 204,622 200,616 202 Z"></path>
+                  <path class="blade-shadow" d="M612 222 C592 248,576 288,572 332 C568 376,574 416,586 452 C602 414,614 374,620 326 C626 294,626 252,618 228 Z"></path>
+                  <path class="blade-highlight" d="M608 214 C594 232,584 262,580 296 C590 270,606 244,622 224 C618 216,614 213,608 214 Z"></path>
+                </g>
+
+                <!-- ═══ LAYER 2: MIDGROUND ════════════════════════════════════ -->
+
+                <!-- Stalk 1: left-of-center, tall elegant stalk -->
+                <g class="kelp-group g1">
+                  <ellipse class="holdfast-shadow" cx="162" cy="528" rx="32" ry="14"></ellipse>
+                  <ellipse class="holdfast" cx="162" cy="520" rx="28" ry="17"></ellipse>
+                  <path class="stipe" d="M152 522 C146 450,142 350,148 248 C154 172,168 120,188 82 L208 90 C190 130,178 180,174 256 C168 358,168 452,176 522 Z"></path>
+
+                  <!-- Primary blade: big left-leaning frond -->
+                  <path class="blade-main" d="M194 92 C158 112,122 166,108 248 C94 330,104 418,136 490 C164 454,188 398,208 332 C224 278,228 214,218 162 C212 128,204 96,194 92 Z"></path>
+                  <path class="blade-shadow" d="M186 118 C158 148,136 202,124 272 C112 340,116 404,130 458 C150 420,168 372,182 316 C194 272,196 216,190 172 C188 150,186 130,186 118 Z"></path>
+                  <path class="blade-highlight" d="M178 112 C160 134,148 170,142 214 C156 186,172 154,196 128 C192 116,186 111,178 112 Z"></path>
+                  <path class="blade-vein" d="M192 96 C176 148,162 218,158 300 C156 360,160 418,170 468"></path>
+
+                  <!-- Blade tip group for secondary lag animation -->
+                  <g class="blade-tip">
+                    <path class="blade-main" d="M136 490 C152 468,172 438,192 404 C208 376,218 346,220 320 C212 338,200 368,184 396 C168 422,152 452,136 490 Z"></path>
+                  </g>
+
+                  <!-- Secondary smaller side blade -->
+                  <path class="blade-wide" d="M170 220 C142 240,118 278,112 328 C106 376,118 426,148 476 C158 436,170 392,186 348 C198 314,202 268,194 236 C190 224,182 218,170 220 Z"></path>
+                </g>
+
+                <!-- Stalk 2: center-left, tallest stalk -->
+                <g class="kelp-group g2">
+                  <ellipse class="holdfast-shadow" cx="278" cy="530" rx="36" ry="15"></ellipse>
+                  <ellipse class="holdfast" cx="278" cy="522" rx="32" ry="19"></ellipse>
+                  <path class="stipe" d="M266 524 C256 446,252 322,264 210 C274 128,302 68,340 28 L362 46 C326 86,302 148,292 228 C280 326,278 446,286 524 Z"></path>
+
+                  <!-- Large primary blade -->
+                  <path class="blade-main" d="M346 40 C306 56,258 110,232 200 C206 288,210 388,244 494 C282 456,316 396,350 316 C378 250,384 170,372 102 C366 70,358 44,346 40 Z"></path>
+                  <path class="blade-shadow" d="M336 64 C300 90,264 148,244 228 C224 304,224 386,244 464 C272 420,298 368,322 300 C344 244,348 170,340 112 C338 90,336 74,336 64 Z"></path>
+                  <path class="blade-highlight" d="M324 62 C296 84,272 120,254 170 C280 138,308 106,340 80 C338 70,332 64,324 62 Z"></path>
+                  <path class="blade-vein" d="M344 44 C326 100,310 178,306 268 C302 340,308 406,320 464"></path>
+
+                  <!-- Tip group -->
+                  <g class="blade-tip">
+                    <path class="blade-main" d="M244 494 C264 470,288 438,310 402 C328 372,340 340,342 314 C330 334,316 364,296 392 C276 420,258 452,244 494 Z"></path>
+                  </g>
+
+                  <!-- Lateral frond mid-height -->
+                  <path class="blade-wide" d="M312 162 C274 180,240 222,226 282 C212 342,222 410,256 470 C272 434,292 388,316 336 C334 296,340 244,334 202 C330 180,322 160,312 162 Z"></path>
+                  <path class="blade-vein" d="M310 168 C294 210,282 264,278 326 C276 374,280 420,290 460"></path>
+                </g>
+
+                <!-- Stalk 3: center, broad and prominent -->
+                <g class="kelp-group g3">
+                  <ellipse class="holdfast-shadow" cx="396" cy="530" rx="38" ry="15"></ellipse>
+                  <ellipse class="holdfast" cx="396" cy="522" rx="34" ry="20"></ellipse>
+                  <path class="stipe" d="M383 524 C372 444,370 314,382 202 C392 120,418 62,452 28 L474 46 C442 80,420 140,410 218 C398 314,396 438,406 524 Z"></path>
+
+                  <!-- Wide main blade right side -->
+                  <path class="blade-main" d="M458 42 C420 56,372 106,346 196 C320 282,324 382,356 488 C390 452,424 392,456 316 C482 254,488 170,478 102 C472 68,466 44,458 42 Z"></path>
+                  <path class="blade-shadow" d="M450 66 C414 90,380 144,360 222 C342 292,342 372,360 448 C388 404,414 354,438 290 C456 240,460 170,454 112 C452 90,450 74,450 66 Z"></path>
+                  <path class="blade-highlight" d="M440 64 C408 88,380 124,362 174 C388 144,416 112,448 86 C446 74,442 66,440 64 Z"></path>
+                  <path class="blade-vein" d="M456 46 C440 106,428 184,424 272 C420 348,426 414,438 472"></path>
+
+                  <!-- Tip group -->
+                  <g class="blade-tip">
+                    <path class="blade-main" d="M356 488 C374 462,398 430,420 396 C438 368,450 338,452 312 C438 332,422 362,404 390 C384 420,368 452,356 488 Z"></path>
+                  </g>
+
+                  <!-- Lateral frond, upper region -->
+                  <path class="blade-wide" d="M484 200 C452 212,420 248,406 302 C392 356,400 420,426 478 C446 440,468 390,488 328 C502 280,506 232,498 210 C494 202,490 198,484 200 Z"></path>
+                  <path class="blade-vein" d="M482 206 C466 248,456 302,454 356 C452 398,456 438,466 472"></path>
+                </g>
+
+                <!-- Stalk 4: right side, medium height -->
+                <g class="kelp-group g4">
+                  <ellipse class="holdfast-shadow" cx="524" cy="528" rx="30" ry="13"></ellipse>
+                  <ellipse class="holdfast" cx="524" cy="520" rx="27" ry="16"></ellipse>
+                  <path class="stipe" d="M515 522 C508 460,506 376,512 298 C518 228,532 178,550 140 L568 148 C552 184,540 234,534 300 C526 378,526 458,534 522 Z"></path>
+
+                  <path class="blade-main" d="M554 150 C524 164,490 206,478 268 C466 330,478 400,502 472 C524 434,546 382,566 320 C580 276,584 224,574 186 C568 164,562 150,554 150 Z"></path>
+                  <path class="blade-shadow" d="M548 172 C522 200,506 244,498 298 C490 350,496 404,512 448 C530 408,546 362,558 308 C568 268,568 220,560 188 Z"></path>
+                  <path class="blade-highlight" d="M542 168 C524 190,510 220,504 256 C516 232,534 204,556 184 C552 172,548 167,542 168 Z"></path>
+                  <path class="blade-vein" d="M552 154 C540 202,534 264,532 330 C530 382,534 426,542 464"></path>
+
+                  <!-- Tip group -->
+                  <g class="blade-tip">
+                    <path class="blade-main" d="M502 472 C516 450,534 420,550 388 C562 362,570 336,572 314 C560 332,548 358,534 384 C518 412,508 440,502 472 Z"></path>
+                  </g>
+                </g>
+
+                <!-- ═══ LAYER 3: FOREGROUND ACCENT ═══════════════════════════ -->
+
+                <!-- Stalk FG: short foreground stalk, wide blades -->
+                <g class="kelp-group g5">
+                  <ellipse class="holdfast-shadow" cx="210" cy="532" rx="26" ry="12"></ellipse>
+                  <ellipse class="holdfast" cx="210" cy="524" rx="23" ry="14"></ellipse>
+                  <path class="stipe" d="M203 524 C198 478,196 412,200 348 C204 294,216 252,232 218 L248 226 C234 260,224 300,220 352 C214 416,214 476,220 524 Z"></path>
+
+                  <!-- Broad asymmetric blade — front layer, slightly wider -->
+                  <path class="blade-wide" d="M236 226 C208 242,178 280,166 330 C154 380,162 440,186 500 C208 468,230 424,252 372 C268 330,272 276,262 242 C256 230,246 224,236 226 Z"></path>
+                  <path class="blade-shadow" d="M230 248 C210 272,196 310,190 356 C184 396,188 438,198 472 C214 438,228 400,240 360 C250 326,252 280,244 256 Z"></path>
+                  <path class="blade-highlight" d="M224 242 C210 262,200 290,196 322 C208 298,224 270,244 252 C238 240,232 240,224 242 Z"></path>
+                  <path class="blade-vein" d="M234 230 C224 268,216 316,214 366 C212 406,216 444,224 476"></path>
+
+                  <g class="blade-tip">
+                    <path class="blade-wide" d="M186 500 C198 480,214 454,230 428 C242 406,250 382,252 362 C242 380,228 406,214 432 C200 458,192 478,186 500 Z"></path>
+                  </g>
+                </g>
+
+              </svg>
+            </div>
+          </div>
+
+          <div class="pollution-overlay" id="pollutionOverlay"></div>
+          <div class="storm-overlay" id="stormOverlay"></div>
+          <div class="kelp-bed"></div>
+        </div>
+
+        <div class="sim-footer">
+          <div class="state-note">
+            <span class="state-dot" id="stateDot"></span>
+            <span id="stateLine">Healthy kelp with active sway and bright water.</span>
+          </div>
+          <div id="stormState">Storm inactive</div>
+        </div>
+      </article>
+
+      <aside class="controls-card">
+        <div class="controls-header">
+          <div class="label">Controls</div>
+          <h2 style="margin:8px 0 0;font-size:1.4rem;">Environmental inputs</h2>
+        </div>
+
+        <div class="instructions">
+          Adjust the habitat manually or switch to simulated serial mode to paste sample sensor-style values.
+          Better conditions support thriving kelp; polluted or imbalanced water pushes it into stress and decay.
+        </div>
+
+        <section class="control-group">
+          <h3 class="group-title">Input mode</h3>
+          <div class="mode-row">
+            <button type="button" class="toggle-chip active" data-mode="manual" id="manualModeBtn">Manual controls</button>
+            <button type="button" class="toggle-chip" data-mode="hardware" id="hardwareModeBtn">Hardware mode</button>
+          </div>
+        </section>
+
+        <section class="control-group mode-panel active" id="manualPanel">
+          <h3 class="group-title">Manual habitat controls</h3>
+
+          <div class="range-control in-range" data-factor="light" id="lightControl">
+            <div class="range-top">
+              <div class="range-title">
+                <strong>Light</strong>
+                <span class="helper-text">Adjust the live value and the target healthy band.</span>
+              </div>
+              <div class="range-meta">
+                <span class="value-badge" id="lightValueBadge">Value 75</span>
+                <span class="range-badge" id="lightRangeBadge">Ideal 60-82</span>
+              </div>
+            </div>
+            <div class="range-shell">
+              <div class="range-hints">
+                <span>Too low</span>
+                <span>Ideal</span>
+                <span>Too high</span>
+              </div>
+              <div class="dual-range" id="lightDualRange">
+                <div class="track-base"></div>
+                <div class="track-ideal"></div>
+                <div class="track-value"></div>
+                <input class="range-input bound lower" type="range" id="lightMin" min="0" max="100" value="60">
+                <input class="range-input bound upper" type="range" id="lightMax" min="0" max="100" value="82">
+                <input class="range-input current" type="range" id="lightCurrent" min="0" max="100" value="75">
+              </div>
+              <div class="range-foot">
+                <span id="lightStatus">Current value is inside the target zone.</span>
+                <span id="lightValue">75</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="range-control in-range" data-factor="temp" id="tempControl">
+            <div class="range-top">
+              <div class="range-title">
+                <strong>Temperature</strong>
+                <span class="helper-text">Keep water temperature inside the healthiest band.</span>
+              </div>
+              <div class="range-meta">
+                <span class="value-badge" id="tempValueBadge">Value 58</span>
+                <span class="range-badge" id="tempRangeBadge">Ideal 52-64</span>
+              </div>
+            </div>
+            <div class="range-shell">
+              <div class="range-hints">
+                <span>Too low</span>
+                <span>Ideal</span>
+                <span>Too high</span>
+              </div>
+              <div class="dual-range" id="tempDualRange">
+                <div class="track-base"></div>
+                <div class="track-ideal"></div>
+                <div class="track-value"></div>
+                <input class="range-input bound lower" type="range" id="tempMin" min="0" max="100" value="52">
+                <input class="range-input bound upper" type="range" id="tempMax" min="0" max="100" value="64">
+                <input class="range-input current" type="range" id="tempCurrent" min="0" max="100" value="58">
+              </div>
+              <div class="range-foot">
+                <span id="tempStatus">Current value is inside the target zone.</span>
+                <span id="tempValue">58</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="range-control in-range" data-factor="nutrients" id="nutrientsControl">
+            <div class="range-top">
+              <div class="range-title">
+                <strong>Nutrients</strong>
+                <span class="helper-text">Healthy kelp needs a stable nutrient window.</span>
+              </div>
+              <div class="range-meta">
+                <span class="value-badge" id="nutrientsValueBadge">Value 72</span>
+                <span class="range-badge" id="nutrientsRangeBadge">Ideal 60-82</span>
+              </div>
+            </div>
+            <div class="range-shell">
+              <div class="range-hints">
+                <span>Too low</span>
+                <span>Ideal</span>
+                <span>Too high</span>
+              </div>
+              <div class="dual-range" id="nutrientsDualRange">
+                <div class="track-base"></div>
+                <div class="track-ideal"></div>
+                <div class="track-value"></div>
+                <input class="range-input bound lower" type="range" id="nutrientsMin" min="0" max="100" value="60">
+                <input class="range-input bound upper" type="range" id="nutrientsMax" min="0" max="100" value="82">
+                <input class="range-input current" type="range" id="nutrientsCurrent" min="0" max="100" value="72">
+              </div>
+              <div class="range-foot">
+                <span id="nutrientsStatus">Current value is inside the target zone.</span>
+                <span id="nutrientsValue">72</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="range-control in-range" data-factor="pollution" id="pollutionControl">
+            <div class="range-top">
+              <div class="range-title">
+                <strong>Pollution</strong>
+                <span class="helper-text">Lower pollution is healthier, with a small safe band near zero.</span>
+              </div>
+              <div class="range-meta">
+                <span class="value-badge" id="pollutionValueBadge">Value 12</span>
+                <span class="range-badge" id="pollutionRangeBadge">Ideal 0-20</span>
+              </div>
+            </div>
+            <div class="range-shell">
+              <div class="range-hints">
+                <span>Too low</span>
+                <span>Ideal</span>
+                <span>Too high</span>
+              </div>
+              <div class="dual-range" id="pollutionDualRange">
+                <div class="track-base"></div>
+                <div class="track-ideal"></div>
+                <div class="track-value"></div>
+                <input class="range-input bound lower" type="range" id="pollutionMin" min="0" max="100" value="0">
+                <input class="range-input bound upper" type="range" id="pollutionMax" min="0" max="100" value="20">
+                <input class="range-input current" type="range" id="pollutionCurrent" min="0" max="100" value="12">
+              </div>
+              <div class="range-foot">
+                <span id="pollutionStatus">Current value is inside the target zone.</span>
+                <span id="pollutionValue">12</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-group mode-panel" id="hardwarePanel">
+          <h3 class="group-title">Photon 2 serial input</h3>
+          <p class="helper-text">
+            Connect a Photon 2 over USB, then stream lines such as
+            <code>light=72,temp=58,nutrients=80,pollution=15</code>.
+          </p>
+          <div class="hardware-status">
+            <span class="hardware-pill" id="hardwareStatusPill">Disconnected</span>
+            <span id="hardwareStatusText">Select the Photon and start reading live knob values.</span>
+          </div>
+          <div class="button-row">
+            <button type="button" id="connectHardwareBtn">Connect to Hardware</button>
+            <button type="button" class="secondary" id="disconnectHardwareBtn" disabled>Disconnect</button>
+          </div>
+          <p class="helper-text">
+            Hardware Mode uses live USB serial values and overrides manual knob dragging while connected.
+          </p>
+
+          <h3 class="group-title" style="margin-top: 6px;">Serial test / fallback</h3>
+          <p class="helper-text">
+            Paste comma-separated values like <code>light=80,temp=55,nutrients=70,pollution=10</code>
+            to test the parsing path without hardware.
+          </p>
+          <div class="simulated-serial">
+            <textarea id="serialInput">light=80,temp=55,nutrients=70,pollution=10</textarea>
+            <div class="button-row">
+              <button type="button" id="applySerialBtn">Apply serial sample</button>
+              <button type="button" class="secondary" id="generateSampleBtn">Generate sample</button>
+            </div>
+            <div class="serial-log" id="serialLog">Awaiting simulated data input.</div>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <h3 class="group-title">Actions</h3>
+          <div class="button-row">
+            <button type="button" class="danger" id="stormBtn">Trigger storm</button>
+            <button type="button" class="secondary" id="resetBtn">Reset conditions</button>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <div class="round-overlay" id="roundOverlay" aria-live="polite">
+    <div class="round-panel">
+      <div class="eyebrow">Round complete</div>
+      <h3 id="roundResultTitle">Excellent Kelp Farmer!</h3>
+      <p id="roundResultText">You kept the kelp alive under pressure.</p>
+      <div class="game-strip" style="margin-top:18px;">
+        <div class="game-stat">
+          <span class="label">Final score</span>
+          <strong id="finalScore">0</strong>
+        </div>
+        <div class="game-stat">
+          <span class="label">Best combo</span>
+          <strong id="finalCombo">x1.0</strong>
+        </div>
+        <div class="game-stat">
+          <span class="label">Outcome</span>
+          <strong id="finalState">Stable</strong>
+        </div>
+      </div>
+      <div class="button-row" style="margin-top:18px;justify-content:center;">
+        <button type="button" id="playAgainBtn">Play again</button>
+      </div>
+    </div>
+  </div>
+
+  <pre id="selfTestReport" hidden></pre>
+
+  <script>
+    (() => {
+      const DEFAULTS = {
+        light: 75,
+        temp: 58,
+        nutrients: 72,
+        pollution: 12
+      };
+
+      const BASE_RANGES = {
+        light: { min: 60, max: 82, tolerance: 26, label: "Light" },
+        temp: { min: 52, max: 64, tolerance: 18, label: "Temperature" },
+        nutrients: { min: 60, max: 82, tolerance: 24, label: "Nutrients" },
+        pollution: { min: 0, max: 20, tolerance: 22, label: "Pollution" }
+      };
+      const INITIAL_RANGES = structuredClone(BASE_RANGES);
+
+      const FACTORS = ["light", "temp", "nutrients", "pollution"];
+      const ROUND_DURATION_MS = 180000;
+      const EVENT_MIN_INTERVAL_MS = 10000;
+      const EVENT_MAX_INTERVAL_MS = 15000;
+      const EVENT_DURATION_MS = 9000;
+      const BANNER_DURATION_MS = 4200;
+      const SERIAL_DEBUG = true;
+
+      const EVENT_LIBRARY = [
+        {
+          factor: "light",
+          name: "Cloud Cover / Water Darkening",
+          icon: "⚠️",
+          explanation: "Clouded water is dimming the kelp bed. Push light higher than normal to keep growth steady.",
+          range: { min: 72, max: 92 },
+          effects: {
+            eventOpacity: 0.42,
+            eventBackground: "linear-gradient(180deg, rgba(32, 58, 74, 0.34), rgba(5, 18, 25, 0.2))",
+            thermalOpacity: 0.05,
+            nutrientOpacity: 0.08,
+            shimmer: false,
+            sunbeamMultiplier: 0.38,
+            waterDuration: 20,
+            waterOpacity: 0.16,
+            stageFilter: "brightness(0.9) saturate(0.95)",
+            bubbleBoost: 0.7,
+            pollutionMultiplier: 1
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(18, 42),
+              temp: randomInt(42, 68),
+              nutrients: randomInt(42, 72),
+              pollution: randomInt(12, 34)
+            };
+          }
+        },
+        {
+          factor: "light",
+          name: "Clear Skies",
+          icon: "☀️",
+          explanation: "Bright clear conditions are flooding the water with light. Slightly lower light is now safer.",
+          range: { min: 48, max: 68 },
+          effects: {
+            eventOpacity: 0.5,
+            eventBackground: "radial-gradient(circle at 50% 12%, rgba(255, 231, 165, 0.34), transparent 35%), linear-gradient(180deg, rgba(255, 213, 126, 0.14), rgba(255, 255, 255, 0.02))",
+            thermalOpacity: 0.08,
+            nutrientOpacity: 0.08,
+            shimmer: false,
+            sunbeamMultiplier: 1.7,
+            waterDuration: 15,
+            waterOpacity: 0.24,
+            stageFilter: "brightness(1.08) saturate(1.12)",
+            bubbleBoost: 1,
+            pollutionMultiplier: 0.9
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(78, 100),
+              temp: randomInt(50, 74),
+              nutrients: randomInt(46, 76),
+              pollution: randomInt(0, 18)
+            };
+          }
+        },
+        {
+          factor: "temp",
+          name: "Heatwave",
+          icon: "⚠️",
+          explanation: "Warm water is rolling in fast. Keep the kelp cooler than usual to avoid stress.",
+          range: { min: 40, max: 54 },
+          effects: {
+            eventOpacity: 0.18,
+            eventBackground: "linear-gradient(180deg, rgba(255, 145, 102, 0.14), rgba(255, 201, 111, 0.08))",
+            thermalOpacity: 0.42,
+            thermalBackground: "linear-gradient(180deg, rgba(255, 102, 61, 0.22), rgba(255, 145, 71, 0.08))",
+            nutrientOpacity: 0.05,
+            shimmer: true,
+            sunbeamMultiplier: 1.18,
+            waterDuration: 17,
+            waterOpacity: 0.2,
+            stageFilter: "brightness(1.02) saturate(1.18)",
+            bubbleBoost: 0.85,
+            pollutionMultiplier: 1
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(62, 94),
+              temp: randomInt(78, 100),
+              nutrients: randomInt(18, 46),
+              pollution: randomInt(14, 36)
+            };
+          }
+        },
+        {
+          factor: "temp",
+          name: "Cold Upwelling",
+          icon: "❄️",
+          explanation: "A cold upwelling is refreshing the water. Kelp can tolerate a slightly warmer setpoint right now.",
+          range: { min: 56, max: 70 },
+          effects: {
+            eventOpacity: 0.2,
+            eventBackground: "linear-gradient(180deg, rgba(120, 201, 255, 0.14), rgba(255, 255, 255, 0.02))",
+            thermalOpacity: 0.26,
+            thermalBackground: "linear-gradient(180deg, rgba(83, 170, 255, 0.18), rgba(93, 214, 255, 0.06))",
+            nutrientOpacity: 0.16,
+            shimmer: false,
+            sunbeamMultiplier: 0.95,
+            waterDuration: 10,
+            waterOpacity: 0.32,
+            stageFilter: "brightness(0.98) saturate(1.08)",
+            bubbleBoost: 1.6,
+            pollutionMultiplier: 0.9
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(44, 76),
+              temp: randomInt(8, 34),
+              nutrients: randomInt(68, 94),
+              pollution: randomInt(2, 20)
+            };
+          }
+        },
+        {
+          factor: "nutrients",
+          name: "Upwelling Boost",
+          icon: "🌊",
+          explanation: "Deep nutrient-rich water has arrived. The healthiest nutrient window shifts upward.",
+          range: { min: 72, max: 94 },
+          effects: {
+            eventOpacity: 0.12,
+            eventBackground: "linear-gradient(180deg, rgba(98, 219, 241, 0.12), rgba(255, 255, 255, 0.02))",
+            thermalOpacity: 0.08,
+            nutrientOpacity: 0.42,
+            nutrientBackground: "radial-gradient(circle at 28% 32%, rgba(107, 255, 205, 0.3), transparent 30%), radial-gradient(circle at 72% 62%, rgba(91, 195, 255, 0.24), transparent 28%)",
+            shimmer: false,
+            sunbeamMultiplier: 1,
+            waterDuration: 9,
+            waterOpacity: 0.34,
+            stageFilter: "brightness(1.03) saturate(1.22)",
+            bubbleBoost: 2.2,
+            pollutionMultiplier: 0.9
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(42, 80),
+              temp: randomInt(18, 42),
+              nutrients: randomInt(82, 100),
+              pollution: randomInt(0, 18)
+            };
+          }
+        },
+        {
+          factor: "nutrients",
+          name: "Nutrient Depletion",
+          icon: "⚠️",
+          explanation: "The water column is running lean. Lower nutrient conditions are the new target for survival.",
+          range: { min: 42, max: 64 },
+          effects: {
+            eventOpacity: 0.1,
+            eventBackground: "linear-gradient(180deg, rgba(165, 167, 154, 0.12), rgba(39, 58, 53, 0.06))",
+            thermalOpacity: 0.06,
+            nutrientOpacity: 0.12,
+            nutrientBackground: "radial-gradient(circle at 30% 30%, rgba(140, 170, 150, 0.14), transparent 28%), radial-gradient(circle at 72% 58%, rgba(120, 147, 152, 0.08), transparent 26%)",
+            shimmer: false,
+            sunbeamMultiplier: 0.84,
+            waterDuration: 22,
+            waterOpacity: 0.14,
+            stageFilter: "brightness(0.92) saturate(0.78)",
+            bubbleBoost: 0.45,
+            pollutionMultiplier: 1
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(28, 64),
+              temp: randomInt(48, 78),
+              nutrients: randomInt(4, 26),
+              pollution: randomInt(16, 38)
+            };
+          }
+        },
+        {
+          factor: "pollution",
+          name: "Algal Bloom",
+          icon: "⚠️",
+          explanation: "A bloom is fouling the water. Pollution must stay very low to avoid blocked light and stress.",
+          range: { min: 0, max: 10 },
+          effects: {
+            eventOpacity: 0.18,
+            eventBackground: "linear-gradient(180deg, rgba(120, 170, 46, 0.16), rgba(54, 82, 32, 0.12))",
+            thermalOpacity: 0.08,
+            nutrientOpacity: 0.18,
+            nutrientBackground: "radial-gradient(circle at 35% 36%, rgba(118, 189, 66, 0.18), transparent 28%), radial-gradient(circle at 70% 62%, rgba(88, 138, 52, 0.14), transparent 24%)",
+            shimmer: false,
+            sunbeamMultiplier: 0.55,
+            waterDuration: 19,
+            waterOpacity: 0.18,
+            stageFilter: "brightness(0.9) saturate(1.1) hue-rotate(12deg)",
+            bubbleBoost: 0.6,
+            pollutionMultiplier: 1.5,
+            pollutionBackground: "radial-gradient(circle at 35% 44%, rgba(116, 158, 38, 0.42), transparent 20%), radial-gradient(circle at 70% 64%, rgba(76, 94, 28, 0.4), transparent 22%), linear-gradient(180deg, rgba(49, 66, 23, 0.18), rgba(20, 31, 16, 0.54))"
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(18, 42),
+              temp: randomInt(52, 82),
+              nutrients: randomInt(72, 98),
+              pollution: randomInt(58, 84)
+            };
+          }
+        },
+        {
+          factor: "pollution",
+          name: "Oil Spill",
+          icon: "🛢️",
+          explanation: "A spill has hit nearby water. Keep pollution nearly at zero or the kelp will crash quickly.",
+          range: { min: 0, max: 6 },
+          effects: {
+            eventOpacity: 0.14,
+            eventBackground: "linear-gradient(180deg, rgba(68, 55, 60, 0.18), rgba(18, 18, 25, 0.22))",
+            thermalOpacity: 0.08,
+            nutrientOpacity: 0.04,
+            shimmer: false,
+            sunbeamMultiplier: 0.42,
+            waterDuration: 18,
+            waterOpacity: 0.12,
+            stageFilter: "brightness(0.8) saturate(0.86)",
+            bubbleBoost: 0.35,
+            pollutionMultiplier: 1.9,
+            pollutionBackground: "radial-gradient(circle at 25% 46%, rgba(34, 30, 34, 0.58), transparent 20%), radial-gradient(circle at 70% 60%, rgba(28, 26, 31, 0.62), transparent 26%), linear-gradient(180deg, rgba(20, 18, 21, 0.24), rgba(10, 10, 12, 0.68))"
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(8, 34),
+              temp: randomInt(38, 70),
+              nutrients: randomInt(22, 56),
+              pollution: randomInt(78, 100)
+            };
+          }
+        },
+        {
+          factor: "pollution",
+          name: "Cleanup Effort",
+          icon: "🧼",
+          explanation: "Cleanup crews are helping. The kelp can tolerate a slightly wider low-pollution band for now.",
+          range: { min: 0, max: 24 },
+          effects: {
+            eventOpacity: 0.16,
+            eventBackground: "linear-gradient(180deg, rgba(183, 235, 255, 0.16), rgba(255, 255, 255, 0.04))",
+            thermalOpacity: 0.06,
+            nutrientOpacity: 0.16,
+            shimmer: false,
+            sunbeamMultiplier: 1.12,
+            waterDuration: 12,
+            waterOpacity: 0.28,
+            stageFilter: "brightness(1.06) saturate(1.04)",
+            bubbleBoost: 1.4,
+            pollutionMultiplier: 0.55,
+            pollutionBackground: "radial-gradient(circle at 35% 44%, rgba(106, 80, 54, 0.16), transparent 20%), radial-gradient(circle at 70% 64%, rgba(59, 62, 77, 0.16), transparent 22%), linear-gradient(180deg, rgba(50, 46, 43, 0.02), rgba(20, 19, 18, 0.2))"
+          },
+          randomizeInputs() {
+            return {
+              light: randomInt(46, 84),
+              temp: randomInt(42, 66),
+              nutrients: randomInt(48, 78),
+              pollution: randomInt(0, 14)
+            };
+          }
+        }
+      ];
+
+      const state = {
+        mode: "manual",
+        inputs: { ...DEFAULTS },
+        dynamicRanges: structuredClone(BASE_RANGES),
+        stormBoost: 0,
+        stormUntil: 0,
+        health: 0,
+        kelpState: "healthy",
+        activeEvent: null,
+        eventEndsAt: 0,
+        bannerEndsAt: 0,
+        nextEventAt: 0,
+        thriveScore: 0,
+        comboStreakMs: 0,
+        comboMultiplier: 1,
+        bestCombo: 1,
+        roundStartAt: 0,
+        roundEndsAt: 0,
+        roundOver: false,
+        loopId: null,
+        lastTickAt: 0,
+        visualEffect: null,
+        hardware: {
+          port: null,
+          reader: null,
+          inputDone: null,
+          readableStreamClosed: null,
+          buffer: "",
+          connected: false,
+          connecting: false
+        }
+      };
+
+      const ui = {
+        simStage: document.getElementById("simStage"),
+        bubbleLayer: document.getElementById("bubbleLayer"),
+        kelpCluster: document.getElementById("kelpCluster"),
+        placeholderVisual: document.getElementById("placeholderVisual"),
+        eventOverlay: document.getElementById("eventOverlay"),
+        thermalOverlay: document.getElementById("thermalOverlay"),
+        nutrientOverlay: document.getElementById("nutrientOverlay"),
+        shimmerOverlay: document.getElementById("shimmerOverlay"),
+        pollutionOverlay: document.getElementById("pollutionOverlay"),
+        healthScore: document.getElementById("healthScore"),
+        meterFill: document.getElementById("meterFill"),
+        statusPill: document.getElementById("statusPill"),
+        stateReadout: document.getElementById("stateReadout"),
+        modeReadout: document.getElementById("modeReadout"),
+        visualReadout: document.getElementById("visualReadout"),
+        eventReadout: document.getElementById("eventReadout"),
+        stateLine: document.getElementById("stateLine"),
+        stateDot: document.getElementById("stateDot"),
+        stormState: document.getElementById("stormState"),
+        manualModeBtn: document.getElementById("manualModeBtn"),
+        hardwareModeBtn: document.getElementById("hardwareModeBtn"),
+        manualPanel: document.getElementById("manualPanel"),
+        hardwarePanel: document.getElementById("hardwarePanel"),
+        serialInput: document.getElementById("serialInput"),
+        serialLog: document.getElementById("serialLog"),
+        stormBtn: document.getElementById("stormBtn"),
+        resetBtn: document.getElementById("resetBtn"),
+        applySerialBtn: document.getElementById("applySerialBtn"),
+        generateSampleBtn: document.getElementById("generateSampleBtn"),
+        connectHardwareBtn: document.getElementById("connectHardwareBtn"),
+        disconnectHardwareBtn: document.getElementById("disconnectHardwareBtn"),
+        hardwareStatusPill: document.getElementById("hardwareStatusPill"),
+        hardwareStatusText: document.getElementById("hardwareStatusText"),
+        thriveScore: document.getElementById("thriveScore"),
+        roundTimer: document.getElementById("roundTimer"),
+        comboValue: document.getElementById("comboValue"),
+        comboNote: document.getElementById("comboNote"),
+        scoreRate: document.getElementById("scoreRate"),
+        activeEventCard: document.getElementById("activeEventCard"),
+        activeEventName: document.getElementById("activeEventName"),
+        activeEventFactor: document.getElementById("activeEventFactor"),
+        activeEventText: document.getElementById("activeEventText"),
+        activeEventRange: document.getElementById("activeEventRange"),
+        eventBanner: document.getElementById("eventBanner"),
+        eventBannerName: document.getElementById("eventBannerName"),
+        eventBannerText: document.getElementById("eventBannerText"),
+        eventBannerRange: document.getElementById("eventBannerRange"),
+        eventBannerTimer: document.getElementById("eventBannerTimer"),
+        roundOverlay: document.getElementById("roundOverlay"),
+        roundResultTitle: document.getElementById("roundResultTitle"),
+        roundResultText: document.getElementById("roundResultText"),
+        finalScore: document.getElementById("finalScore"),
+        finalCombo: document.getElementById("finalCombo"),
+        finalState: document.getElementById("finalState"),
+        playAgainBtn: document.getElementById("playAgainBtn")
+      };
+
+      ui.factorControls = {
+        light: buildFactorRefs("light"),
+        temp: buildFactorRefs("temp"),
+        nutrients: buildFactorRefs("nutrients"),
+        pollution: buildFactorRefs("pollution")
+      };
+
+      function buildFactorRefs(factor) {
+        return {
+          wrapper: document.getElementById(`${factor}Control`),
+          current: document.getElementById(`${factor}Current`),
+          min: document.getElementById(`${factor}Min`),
+          max: document.getElementById(`${factor}Max`),
+          valueText: document.getElementById(`${factor}Value`),
+          valueBadge: document.getElementById(`${factor}ValueBadge`),
+          rangeBadge: document.getElementById(`${factor}RangeBadge`),
+          statusText: document.getElementById(`${factor}Status`)
+        };
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function randomInt(min, max) {
+        return Math.floor(randomBetween(min, max + 1));
+      }
+
+      function formatClock(ms) {
+        const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      function formatRange(range) {
+        return `${range.min}-${range.max}`;
+      }
+
+      function scheduleNextEvent(now) {
+        state.nextEventAt = now + randomBetween(EVENT_MIN_INTERVAL_MS, EVENT_MAX_INTERVAL_MS);
+      }
+
+      function logSerialDebug(label, payload) {
+        if (SERIAL_DEBUG) {
+          console.log(`[serial] ${label}`, payload);
+        }
+      }
+
+      function computeDynamicRanges() {
+        state.dynamicRanges = structuredClone(BASE_RANGES);
+        if (state.activeEvent) {
+          const factor = state.activeEvent.factor;
+          state.dynamicRanges[factor].min = state.activeEvent.range.min;
+          state.dynamicRanges[factor].max = state.activeEvent.range.max;
+        }
+      }
+
+      // Each event also applies a meaningful random shock to the live values so the
+      // player must react instead of seeing only a target-range change.
+      function applyEventParameterShock(event) {
+        const nextInputs = event.randomizeInputs();
+        FACTORS.forEach((factor) => {
+          state.inputs[factor] = clamp(nextInputs[factor], 0, 100);
+        });
+
+        // Guard against weak random rolls: force the affected factor and at least
+        // one supporting factor to shift far enough from the baseline to feel urgent.
+        const primary = event.factor;
+        if (Math.abs(state.inputs[primary] - DEFAULTS[primary]) < 12) {
+          if (state.inputs[primary] >= DEFAULTS[primary]) {
+            state.inputs[primary] = clamp(DEFAULTS[primary] + 18, 0, 100);
+          } else {
+            state.inputs[primary] = clamp(DEFAULTS[primary] - 18, 0, 100);
+          }
+        }
+
+        const changedFactors = FACTORS.filter((factor) =>
+          Math.abs(state.inputs[factor] - DEFAULTS[factor]) >= 10
+        );
+        if (changedFactors.length < 2) {
+          const fallbackMap = {
+            light: "pollution",
+            temp: "nutrients",
+            nutrients: "temp",
+            pollution: "light"
+          };
+          const secondary = fallbackMap[primary];
+          state.inputs[secondary] = state.inputs[secondary] >= DEFAULTS[secondary]
+            ? clamp(DEFAULTS[secondary] - 18, 0, 100)
+            : clamp(DEFAULTS[secondary] + 18, 0, 100);
+        }
+      }
+
+      function getDefaultVisualEffect() {
+        return {
+          eventOpacity: 0,
+          eventBackground: "radial-gradient(circle at 50% 16%, rgba(255, 244, 205, 0.14), transparent 34%), linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0))",
+          thermalOpacity: 0,
+          thermalBackground: "linear-gradient(180deg, rgba(255, 120, 85, 0.1), rgba(22, 89, 146, 0.06))",
+          nutrientOpacity: 0,
+          nutrientBackground: "radial-gradient(circle at 30% 30%, rgba(102, 244, 178, 0.18), transparent 28%), radial-gradient(circle at 70% 58%, rgba(120, 219, 255, 0.12), transparent 26%)",
+          shimmer: false,
+          sunbeamMultiplier: 1,
+          waterDuration: 18,
+          waterOpacity: 0.22,
+          stageFilter: "none",
+          bubbleBoost: 1,
+          pollutionMultiplier: 1,
+          pollutionBackground: "radial-gradient(circle at 35% 44%, rgba(106, 80, 54, 0.34), transparent 20%), radial-gradient(circle at 70% 64%, rgba(59, 62, 77, 0.46), transparent 22%), linear-gradient(180deg, rgba(50, 46, 43, 0.06), rgba(20, 19, 18, 0.5))"
+        };
+      }
+
+      function pickEvent() {
+        const available = EVENT_LIBRARY.filter((event) =>
+          !state.activeEvent || event.name !== state.activeEvent.name
+        );
+        return available[Math.floor(Math.random() * available.length)];
+      }
+
+      // Sudden events change one factor's target range for a short window.
+      function triggerSuddenEvent(now) {
+        const selected = pickEvent();
+        state.activeEvent = selected;
+        state.eventEndsAt = now + EVENT_DURATION_MS;
+        state.bannerEndsAt = now + BANNER_DURATION_MS;
+        scheduleNextEvent(now);
+        computeDynamicRanges();
+        applyEventParameterShock(selected);
+        state.visualEffect = { ...getDefaultVisualEffect(), ...selected.effects };
+      }
+
+      function clearExpiredEvent(now) {
+        if (state.activeEvent && now >= state.eventEndsAt) {
+          state.activeEvent = null;
+          state.eventEndsAt = 0;
+          state.bannerEndsAt = 0;
+          computeDynamicRanges();
+          state.visualEffect = getDefaultVisualEffect();
+        }
+      }
+
+      function scoreAgainstRange(value, range) {
+        if (value >= range.min && value <= range.max) {
+          return 100;
+        }
+        const distance = value < range.min ? range.min - value : value - range.max;
+        return clamp(100 - (distance / range.tolerance) * 100, 0, 100);
+      }
+
+      // The health model scores each factor against the current event-adjusted range.
+      function computeHealth(inputs, stormBoost) {
+        const lightScore = scoreAgainstRange(inputs.light, state.dynamicRanges.light);
+        const tempScore = scoreAgainstRange(inputs.temp, state.dynamicRanges.temp);
+        const nutrientScore = scoreAgainstRange(inputs.nutrients, state.dynamicRanges.nutrients);
+        const pollutionScore = scoreAgainstRange(inputs.pollution, state.dynamicRanges.pollution);
+
+        const weighted =
+          lightScore * 0.26 +
+          tempScore * 0.26 +
+          nutrientScore * 0.28 +
+          pollutionScore * 0.2;
+
+        const rawHealth = clamp(Math.round(weighted - stormBoost), 0, 100);
+
+        if (rawHealth >= 70) return { health: rawHealth, state: "healthy" };
+        if (rawHealth >= 40) return { health: rawHealth, state: "stressed" };
+        return { health: rawHealth, state: "decaying" };
+      }
+
+      function getStatusForFactor(value, range) {
+        if (value < range.min) return "too-low";
+        if (value > range.max) return "too-high";
+        return "in-range";
+      }
+
+      function getFactorMessage(factor, status) {
+        const label = BASE_RANGES[factor].label;
+        if (status === "in-range") return `${label} is inside the active target zone.`;
+        if (status === "too-low") return `${label} is below the active target zone.`;
+        return `${label} is above the active target zone.`;
+      }
+
+      // Scoring rewards healthy streaks and punishes decay so students must react quickly.
+      function updateScore(deltaMs) {
+        if (state.roundOver) return;
+
+        if (state.kelpState === "healthy") {
+          state.comboStreakMs += deltaMs;
+          state.comboMultiplier = 1 + Math.min(2.5, state.comboStreakMs / 20000);
+          state.bestCombo = Math.max(state.bestCombo, state.comboMultiplier);
+          state.thriveScore += (8 * state.comboMultiplier * deltaMs) / 1000;
+        } else if (state.kelpState === "stressed") {
+          state.comboStreakMs = Math.max(0, state.comboStreakMs - deltaMs * 1.2);
+          state.comboMultiplier = Math.max(1, 1 + state.comboStreakMs / 20000);
+          state.thriveScore -= (5 * deltaMs) / 1000;
+        } else {
+          state.comboStreakMs = 0;
+          state.comboMultiplier = 1;
+          state.thriveScore -= (10 * deltaMs) / 1000;
+        }
+
+        state.thriveScore = Math.max(0, Math.round(state.thriveScore));
+      }
+
+      function finishRound() {
+        state.roundOver = true;
+        if (state.loopId) {
+          window.clearInterval(state.loopId);
+          state.loopId = null;
+        }
+
+        const score = state.thriveScore;
+        let title = "Kelp in Danger!";
+        let text = "The kelp struggled to survive the event cycle. Try reacting faster next round.";
+
+        if (score >= 900) {
+          title = "Excellent Kelp Farmer!";
+          text = "You handled the sudden events with precision and kept the kelp thriving.";
+        } else if (score >= 550) {
+          title = "Strong Ocean Steward!";
+          text = "You protected the kelp through most of the round and recovered from pressure well.";
+        } else if (score >= 250) {
+          title = "Kelp Under Pressure";
+          text = "You kept the system alive, but a few events pushed the kelp close to collapse.";
+        }
+
+        ui.roundResultTitle.textContent = title;
+        ui.roundResultText.textContent = text;
+        ui.finalScore.textContent = String(score);
+        ui.finalCombo.textContent = `x${state.bestCombo.toFixed(1)}`;
+        ui.finalState.textContent =
+          state.kelpState === "healthy" ? "Thriving" :
+          state.kelpState === "stressed" ? "Recovering" : "Critical";
+        ui.roundOverlay.classList.add("visible");
+      }
+
+      function tickGame(now) {
+        if (state.roundOver) return;
+
+        if (state.lastTickAt === 0) {
+          state.lastTickAt = now;
+        }
+
+        const deltaMs = now - state.lastTickAt;
+        state.lastTickAt = now;
+
+        if (state.stormUntil > now) {
+          state.stormBoost = 22;
+          ui.stormState.textContent = "Storm surge active";
+          ui.simStage.classList.add("storming");
+        } else {
+          state.stormBoost = 0;
+          ui.stormState.textContent = "Storm inactive";
+          ui.simStage.classList.remove("storming");
+        }
+
+        if (!state.activeEvent && now >= state.nextEventAt) {
+          triggerSuddenEvent(now);
+        }
+
+        clearExpiredEvent(now);
+
+        const result = computeHealth(state.inputs, state.stormBoost);
+        state.health = result.health;
+        state.kelpState = result.state;
+
+        updateScore(deltaMs);
+
+        if (now >= state.roundEndsAt) {
+          finishRound();
+        }
+
+        render(now);
+      }
+
+      function updateFactorUI() {
+        FACTORS.forEach((factor) => {
+          const control = ui.factorControls[factor];
+          const currentValue = state.inputs[factor];
+          const range = state.dynamicRanges[factor];
+          const status = getStatusForFactor(currentValue, range);
+
+          control.current.value = String(currentValue);
+          control.min.value = String(range.min);
+          control.max.value = String(range.max);
+          control.valueText.textContent = String(currentValue);
+          control.valueBadge.textContent = `Value ${currentValue}`;
+          control.rangeBadge.textContent = `Target ${formatRange(range)}`;
+          control.wrapper.classList.remove("too-low", "too-high", "in-range");
+          control.wrapper.classList.add(status);
+          control.wrapper.style.setProperty("--range-start", `${range.min}%`);
+          control.wrapper.style.setProperty("--range-end", `${range.max}%`);
+          control.wrapper.style.setProperty("--value-pos", `${currentValue}%`);
+          control.statusText.textContent = getFactorMessage(factor, status);
+        });
+      }
+
+      function updateEventUI(now) {
+        const activeEvent = state.activeEvent;
+        const bannerVisible = activeEvent && now < state.bannerEndsAt;
+        ui.eventBanner.classList.toggle("compact", !bannerVisible);
+
+        if (activeEvent) {
+          const factorLabel = BASE_RANGES[activeEvent.factor].label;
+          const remaining = Math.max(0, state.eventEndsAt - now);
+          ui.eventBannerName.textContent = `${activeEvent.icon} ${activeEvent.name}!`;
+          ui.eventBannerText.textContent = activeEvent.explanation;
+          ui.eventBannerRange.textContent = `${factorLabel}: ${formatRange(activeEvent.range)}`;
+          ui.eventBannerTimer.textContent = `Active for ${formatClock(remaining)} more`;
+
+          ui.activeEventCard.classList.remove("muted");
+          ui.activeEventName.textContent = `${activeEvent.icon} ${activeEvent.name}`;
+          ui.activeEventFactor.textContent = factorLabel;
+          ui.activeEventText.textContent = activeEvent.explanation;
+          ui.activeEventRange.textContent = `Keep ${factorLabel.toLowerCase()} between ${formatRange(activeEvent.range)} until the event ends.`;
+          ui.visualReadout.textContent = `${factorLabel} shift`;
+        } else {
+          const nextIn = Math.max(0, state.nextEventAt - now);
+          ui.activeEventCard.classList.add("muted");
+          ui.activeEventName.textContent = "No sudden event active";
+          ui.activeEventFactor.textContent = "Standby";
+          ui.activeEventText.textContent = "The ocean is stable for now. Keep each current value inside its green target band.";
+          ui.activeEventRange.textContent = `Next sudden event expected in about ${formatClock(nextIn)}.`;
+          ui.visualReadout.textContent = "Waiting";
+        }
+      }
+
+      function updateNarrative() {
+        if (state.kelpState === "healthy") {
+          ui.statusPill.textContent = "Thriving";
+          ui.statusPill.style.background = "var(--accent-seafoam)";
+          ui.statusPill.style.color = "#082732";
+          ui.stateDot.style.background = "var(--accent-seafoam)";
+          ui.stateLine.textContent = "Healthy kelp with active sway and bright water.";
+          ui.eventReadout.textContent = state.activeEvent
+            ? "You are matching the event-adjusted target range. Keep the combo alive."
+            : "Conditions are balanced. The kelp is currently in a strong growth range.";
+          return;
+        }
+
+        if (state.kelpState === "stressed") {
+          ui.statusPill.textContent = "Stressed";
+          ui.statusPill.style.background = "var(--accent-warning)";
+          ui.statusPill.style.color = "#36210a";
+          ui.stateDot.style.background = "var(--accent-warning)";
+          ui.stateLine.textContent = "The fronds are drooping and the water appears murkier.";
+          ui.eventReadout.textContent = "The kelp is outside one or more target bands. React quickly before the score falls harder.";
+          return;
+        }
+
+        ui.statusPill.textContent = "Decaying";
+        ui.statusPill.style.background = "var(--accent-danger)";
+        ui.statusPill.style.color = "#310f17";
+        ui.stateDot.style.background = "var(--accent-danger)";
+        ui.stateLine.textContent = "Decay has set in. Motion is weaker and the kelp looks damaged.";
+        ui.eventReadout.textContent = "Critical conditions. Pull the values back into the green zone immediately.";
+      }
+
+      function render(now = Date.now()) {
+        ui.healthScore.textContent = String(state.health);
+        ui.meterFill.style.width = `${state.health}%`;
+        ui.modeReadout.textContent = state.mode === "manual" ? "Manual controls" : "Hardware mode";
+        ui.stateReadout.textContent =
+          state.kelpState === "healthy" ? "Healthy" :
+          state.kelpState === "stressed" ? "Stressed" : "Decaying";
+
+        const opacity = 0.52 + state.health / 120;
+        const saturation = 0.4 + state.health / 80;
+        const hueShift = state.kelpState === "healthy" ? 0 : state.kelpState === "stressed" ? -18 : -38;
+        ui.kelpCluster.style.filter = `saturate(${saturation}) hue-rotate(${hueShift}deg)`;
+        ui.kelpCluster.style.opacity = opacity.toFixed(2);
+        ui.kelpCluster.style.transform =
+          state.kelpState === "healthy" ? "translateY(0) scale(1)" :
+          state.kelpState === "stressed" ? "translateY(8px) scale(0.98)" :
+          "translateY(16px) scale(0.95) rotate(3deg)";
+        ui.kelpCluster.classList.remove("state-healthy", "state-stressed", "state-decaying");
+        ui.kelpCluster.classList.add(`state-${state.kelpState}`);
+
+        ui.placeholderVisual.style.display = "flex";
+        const effect = state.visualEffect || getDefaultVisualEffect();
+        ui.simStage.style.filter = effect.stageFilter;
+        ui.eventOverlay.style.opacity = String(effect.eventOpacity);
+        ui.eventOverlay.style.background = effect.eventBackground;
+        ui.thermalOverlay.style.opacity = String(effect.thermalOpacity);
+        ui.thermalOverlay.style.background = effect.thermalBackground || getDefaultVisualEffect().thermalBackground;
+        ui.nutrientOverlay.style.opacity = String(effect.nutrientOpacity);
+        ui.nutrientOverlay.style.background = effect.nutrientBackground || getDefaultVisualEffect().nutrientBackground;
+        ui.shimmerOverlay.classList.toggle("active", Boolean(effect.shimmer));
+        ui.shimmerOverlay.style.opacity = effect.shimmer ? "0.2" : "0";
+
+        ui.pollutionOverlay.style.background = effect.pollutionBackground || getDefaultVisualEffect().pollutionBackground;
+        ui.pollutionOverlay.style.opacity = String(
+          clamp(((state.inputs.pollution + state.stormBoost) / 120) * effect.pollutionMultiplier, 0, 0.88)
+        );
+
+        const beamOpacity = clamp((state.inputs.light / 240) * effect.sunbeamMultiplier, 0.04, 0.62);
+        document.querySelectorAll(".sunbeam").forEach((beam) => {
+          beam.style.opacity = beamOpacity.toFixed(2);
+        });
+        ui.bubbleLayer.style.opacity = String(clamp(0.65 * effect.bubbleBoost, 0.4, 1));
+        ui.bubbleLayer.querySelectorAll(".bubble").forEach((bubble) => {
+          const baseDuration = Number(bubble.dataset.baseDuration || 10);
+          bubble.style.animationDuration = `${Math.max(3.8, baseDuration / effect.bubbleBoost)}s`;
+        });
+        const waterOverlay = ui.simStage.querySelector(".water-overlay");
+        waterOverlay.style.animationDuration = `${effect.waterDuration}s`;
+        waterOverlay.style.opacity = String(effect.waterOpacity);
+
+        ui.thriveScore.textContent = String(state.thriveScore);
+        ui.roundTimer.textContent = formatClock(state.roundEndsAt - now);
+        ui.comboValue.textContent = `x${state.comboMultiplier.toFixed(1)}`;
+        ui.comboNote.textContent = state.comboMultiplier > 1.2
+          ? "Combo is climbing. Stay in range to score faster."
+          : "Keep the kelp healthy to build a stronger multiplier.";
+        ui.scoreRate.textContent =
+          state.kelpState === "healthy"
+            ? `Scoring at +${(8 * state.comboMultiplier).toFixed(1)} per second`
+            : state.kelpState === "stressed"
+              ? "Losing ground while stressed"
+              : "Heavy score loss during decay";
+
+        updateFactorUI();
+        updateEventUI(now);
+        updateNarrative();
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+
+        if (mode === "hardware" && !state.hardware.connected) {
+          ui.serialLog.textContent = "Hardware mode ready. Connect the Photon or apply a serial sample.";
+        }
+
+        ui.manualModeBtn.classList.toggle("active", state.mode === "manual");
+        ui.hardwareModeBtn.classList.toggle("active", state.mode === "hardware");
+        ui.manualPanel.classList.add("active");
+        ui.hardwarePanel.classList.toggle("active", state.mode === "hardware");
+        updateInputInteractivity();
+        render();
+      }
+
+      function applyManualInput(key, value) {
+        if (state.mode !== "manual") {
+          return;
+        }
+        state.inputs[key] = clamp(Number(value), 0, 100);
+        const result = computeHealth(state.inputs, state.stormBoost);
+        state.health = result.health;
+        state.kelpState = result.state;
+        render();
+      }
+
+      function applyManualRange(key, edge, value) {
+        if (state.mode !== "manual") {
+          return;
+        }
+
+        const range = BASE_RANGES[key];
+        const numeric = clamp(Number(value), 0, 100);
+        if (edge === "min") {
+          range.min = Math.min(numeric, range.max);
+        } else {
+          range.max = Math.max(numeric, range.min);
+        }
+
+        computeDynamicRanges();
+        const result = computeHealth(state.inputs, state.stormBoost);
+        state.health = result.health;
+        state.kelpState = result.state;
+        render();
+      }
+
+      function parseSerialPayload(text) {
+        const next = { ...state.inputs };
+        const tokens = text.split(/[,\n]+/).map((part) => part.trim()).filter(Boolean);
+
+        logSerialDebug("raw", text);
+
+        tokens.forEach((token) => {
+          const [rawKey, rawValue] = token.split("=");
+          const key = rawKey ? rawKey.trim().toLowerCase() : "";
+          const numeric = clamp(Number(rawValue), 0, 100);
+          if (!Number.isFinite(numeric)) return;
+          if (key === "light") next.light = numeric;
+          if (key === "temp" || key === "temperature") next.temp = numeric;
+          if (key === "nutrients" || key === "nutrient") next.nutrients = numeric;
+          if (key === "pollution") next.pollution = numeric;
+        });
+
+        logSerialDebug("parsed", next);
+        return next;
+      }
+
+      // The USB serial protocol is line-oriented key=value data produced by the
+      // Photon firmware, for example:
+      // light=72,temp=58,nutrients=80,pollution=15
+      function updateHardwareStatus() {
+        const supported = "serial" in navigator;
+        const connected = state.hardware.connected;
+        const connecting = state.hardware.connecting;
+
+        ui.hardwareStatusPill.textContent =
+          connecting ? "Connecting..." :
+          connected ? "Connected to Photon" :
+          supported ? "Disconnected" : "Web Serial unavailable";
+        ui.hardwareStatusPill.classList.toggle("connected", connected);
+
+        if (!supported) {
+          ui.hardwareStatusText.textContent = "This browser does not support Web Serial. Use a Chromium-based browser for Photon input.";
+        } else if (connecting) {
+          ui.hardwareStatusText.textContent = "Opening the Photon 2 serial connection.";
+        } else if (connected) {
+          ui.hardwareStatusText.textContent = "Live Photon knob values are driving the simulator.";
+        } else {
+          ui.hardwareStatusText.textContent = "Select the Photon and start reading live knob values.";
+        }
+
+        ui.connectHardwareBtn.disabled = !supported || connected || connecting;
+        ui.disconnectHardwareBtn.disabled = !connected && !connecting;
+        ui.hardwareModeBtn.disabled = false;
+      }
+
+      function updateInputInteractivity() {
+        const manualEnabled = state.mode === "manual";
+        ui.manualPanel.classList.toggle("readonly", !manualEnabled);
+        FACTORS.forEach((factor) => {
+          const control = ui.factorControls[factor];
+          control.current.disabled = !manualEnabled;
+          control.min.disabled = !manualEnabled;
+          control.max.disabled = !manualEnabled;
+        });
+      }
+
+      function applyExternalInputs(nextInputs, sourceLabel) {
+        state.inputs.light = clamp(Number(nextInputs.light), 0, 100);
+        state.inputs.temp = clamp(Number(nextInputs.temp), 0, 100);
+        state.inputs.nutrients = clamp(Number(nextInputs.nutrients), 0, 100);
+        state.inputs.pollution = clamp(Number(nextInputs.pollution), 0, 100);
+
+        const result = computeHealth(state.inputs, state.stormBoost);
+        state.health = result.health;
+        state.kelpState = result.state;
+        ui.serialLog.textContent =
+          `${sourceLabel}: light=${state.inputs.light}, temp=${state.inputs.temp}, nutrients=${state.inputs.nutrients}, pollution=${state.inputs.pollution}`;
+        render();
+      }
+
+      async function disconnectHardware() {
+        const hardware = state.hardware;
+        hardware.connecting = false;
+        hardware.connected = false;
+
+        try {
+          if (hardware.reader) {
+            await hardware.reader.cancel();
+          }
+        } catch (error) {
+          // Ignore stream cancellation errors during shutdown.
+        }
+
+        try {
+          if (hardware.readableStreamClosed) {
+            await hardware.readableStreamClosed.catch(() => {});
+          }
+        } catch (error) {
+          // Ignore pipe cleanup errors.
+        }
+
+        try {
+          if (hardware.port) {
+            await hardware.port.close();
+          }
+        } catch (error) {
+          // Ignore close errors if the device already disappeared.
+        }
+
+        hardware.port = null;
+        hardware.reader = null;
+        hardware.readableStreamClosed = null;
+        hardware.buffer = "";
+
+        updateHardwareStatus();
+        updateInputInteractivity();
+        render();
+      }
+
+      async function readHardwareLoop() {
+        const hardware = state.hardware;
+        const textDecoder = new TextDecoderStream();
+        hardware.readableStreamClosed = hardware.port.readable.pipeTo(textDecoder.writable);
+        const reader = textDecoder.readable.getReader();
+        hardware.reader = reader;
+
+        try {
+          while (hardware.connected) {
+            const { value, done } = await reader.read();
+            if (done) {
+              break;
+            }
+
+            hardware.buffer += value;
+            const lines = hardware.buffer.split(/\r?\n/);
+            hardware.buffer = lines.pop() || "";
+
+            lines.forEach((line) => {
+              const trimmed = line.trim();
+              if (!trimmed) return;
+              const parsed = parseSerialPayload(trimmed);
+              if (state.mode === "hardware") {
+                applyExternalInputs(parsed, "Photon stream");
+              } else {
+                ui.serialLog.textContent = `Photon standby sample: ${trimmed}`;
+              }
+            });
+          }
+        } finally {
+          reader.releaseLock();
+          hardware.reader = null;
+        }
+      }
+
+      async function connectHardware() {
+        if (!("serial" in navigator) || state.hardware.connected || state.hardware.connecting) {
+          return;
+        }
+
+        state.hardware.connecting = true;
+        updateHardwareStatus();
+
+        try {
+          state.hardware.port = await navigator.serial.requestPort();
+          await state.hardware.port.open({ baudRate: 115200 });
+          state.hardware.connected = true;
+          state.hardware.connecting = false;
+          state.hardware.buffer = "";
+          updateHardwareStatus();
+          setMode("hardware");
+          await readHardwareLoop();
+        } catch (error) {
+          state.hardware.connecting = false;
+          state.hardware.connected = false;
+          ui.serialLog.textContent = `Hardware connection failed: ${error.message || error}`;
+          updateHardwareStatus();
+        } finally {
+          if (state.hardware.port) {
+            state.hardware.connected = false;
+            await disconnectHardware();
+          }
+        }
+      }
+
+      function generateSamplePayload() {
+        const sample = {
+          light: Math.round(35 + Math.random() * 55),
+          temp: Math.round(40 + Math.random() * 40),
+          nutrients: Math.round(30 + Math.random() * 60),
+          pollution: Math.round(Math.random() * 65)
+        };
+        return `light=${sample.light},temp=${sample.temp},nutrients=${sample.nutrients},pollution=${sample.pollution}`;
+      }
+
+      function triggerStorm() {
+        state.stormUntil = Date.now() + 2400;
+        render();
+        window.setTimeout(() => render(), 2500);
+      }
+
+      function restartRound() {
+        const now = Date.now();
+        state.inputs = { ...DEFAULTS };
+        Object.keys(INITIAL_RANGES).forEach((factor) => {
+          BASE_RANGES[factor].min = INITIAL_RANGES[factor].min;
+          BASE_RANGES[factor].max = INITIAL_RANGES[factor].max;
+        });
+        state.dynamicRanges = structuredClone(BASE_RANGES);
+        state.visualEffect = getDefaultVisualEffect();
+        state.stormBoost = 0;
+        state.stormUntil = 0;
+        state.activeEvent = null;
+        state.eventEndsAt = 0;
+        state.bannerEndsAt = 0;
+        state.thriveScore = 0;
+        state.comboStreakMs = 0;
+        state.comboMultiplier = 1;
+        state.bestCombo = 1;
+        state.roundOver = false;
+        state.roundStartAt = now;
+        state.roundEndsAt = now + ROUND_DURATION_MS;
+        state.lastTickAt = now;
+        scheduleNextEvent(now);
+        ui.serialInput.value = "light=80,temp=55,nutrients=70,pollution=10";
+        ui.serialLog.textContent = "Awaiting simulated data input.";
+        ui.roundOverlay.classList.remove("visible");
+        updateHardwareStatus();
+        setMode("manual");
+
+        if (state.loopId) {
+          window.clearInterval(state.loopId);
+        }
+        state.loopId = window.setInterval(() => tickGame(Date.now()), 250);
+
+        const result = computeHealth(state.inputs, state.stormBoost);
+        state.health = result.health;
+        state.kelpState = result.state;
+        render(now);
+      }
+
+      function resetAll() {
+        restartRound();
+      }
+
+      function populateBubbles() {
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < 18; i += 1) {
+          const bubble = document.createElement("div");
+          bubble.className = "bubble";
+          bubble.style.left = `${5 + Math.random() * 90}%`;
+          const baseDuration = 7 + Math.random() * 8;
+          bubble.dataset.baseDuration = baseDuration.toFixed(2);
+          bubble.style.animationDuration = `${baseDuration}s`;
+          bubble.style.animationDelay = `${-Math.random() * 10}s`;
+          bubble.style.opacity = (0.12 + Math.random() * 0.3).toFixed(2);
+          const size = 6 + Math.random() * 10;
+          bubble.style.width = `${size}px`;
+          bubble.style.height = `${size}px`;
+          fragment.appendChild(bubble);
+        }
+        ui.bubbleLayer.appendChild(fragment);
+      }
+
+      function bindEvents() {
+        FACTORS.forEach((factor) => {
+          const control = ui.factorControls[factor];
+          control.current.addEventListener("input", (event) => applyManualInput(factor, event.target.value));
+          control.min.addEventListener("input", (event) => applyManualRange(factor, "min", event.target.value));
+          control.max.addEventListener("input", (event) => applyManualRange(factor, "max", event.target.value));
+        });
+
+        ui.manualModeBtn.addEventListener("click", () => setMode("manual"));
+        ui.hardwareModeBtn.addEventListener("click", () => setMode("hardware"));
+
+        ui.applySerialBtn.addEventListener("click", () => {
+          const parsed = parseSerialPayload(ui.serialInput.value);
+          applyExternalInputs(parsed, "Applied serial sample");
+        });
+
+        ui.generateSampleBtn.addEventListener("click", () => {
+          const sample = generateSamplePayload();
+          ui.serialInput.value = sample;
+          ui.serialLog.textContent = `Generated sample payload: ${sample}`;
+        });
+
+        ui.connectHardwareBtn.addEventListener("click", () => {
+          connectHardware();
+        });
+        ui.disconnectHardwareBtn.addEventListener("click", () => {
+          disconnectHardware();
+        });
+
+        ui.stormBtn.addEventListener("click", triggerStorm);
+        ui.resetBtn.addEventListener("click", resetAll);
+        ui.playAgainBtn.addEventListener("click", restartRound);
+      }
+
+      function runSelfTest() {
+        const reportNode = document.getElementById("selfTestReport");
+        const results = [];
+
+        try {
+          restartRound();
+
+          results.push({
+            check: "all-dom-references-exist",
+            pass: Object.entries(ui)
+              .filter(([, value]) => value === null)
+              .length === 0
+          });
+
+          ui.hardwareModeBtn.click();
+          results.push({
+            check: "hardware-mode-panel-opens-before-connection",
+            pass:
+              state.mode === "hardware" &&
+              ui.hardwarePanel.classList.contains("active") &&
+              ui.manualPanel.classList.contains("active")
+          });
+
+          ui.serialInput.value = "light=33,temp=44,nutrients=55,pollution=66";
+          ui.applySerialBtn.click();
+          results.push({
+            check: "hardware-mode-serial-values-move-visual-sliders",
+            pass:
+              ui.factorControls.light.current.value === "33" &&
+              ui.factorControls.temp.current.value === "44" &&
+              ui.factorControls.nutrients.current.value === "55" &&
+              ui.factorControls.pollution.current.value === "66"
+          });
+
+          ui.manualModeBtn.click();
+          ui.factorControls.light.current.value = "15";
+          ui.factorControls.light.current.dispatchEvent(new Event("input", { bubbles: true }));
+          results.push({
+            check: "manual-current-slider-updates-health",
+            pass: state.inputs.light === 15 && state.health < 100
+          });
+
+          ui.factorControls.light.min.value = "10";
+          ui.factorControls.light.min.dispatchEvent(new Event("input", { bubbles: true }));
+          ui.factorControls.light.max.value = "20";
+          ui.factorControls.light.max.dispatchEvent(new Event("input", { bubbles: true }));
+          results.push({
+            check: "manual-target-band-controls-update-scoring-range",
+            pass: BASE_RANGES.light.min === 10 && BASE_RANGES.light.max === 20 && state.dynamicRanges.light.max === 20
+          });
+
+          restartRound();
+
+          const initialEventAt = state.nextEventAt;
+          const baselineInputs = { ...state.inputs };
+          triggerSuddenEvent(Date.now());
+          results.push({
+            check: "event-system-activates",
+            pass: Boolean(state.activeEvent) && state.eventEndsAt > Date.now()
+          });
+          const changedFactors = FACTORS.filter((factor) =>
+            Math.abs(state.inputs[factor] - baselineInputs[factor]) >= 10
+          ).length;
+          results.push({
+            check: "event-randomizes-parameters",
+            pass: changedFactors >= 2
+          });
+
+          applyManualInput(state.activeEvent.factor, state.dynamicRanges[state.activeEvent.factor].min);
+          results.push({
+            check: "dynamic-range-updates",
+            pass: ui.factorControls[state.activeEvent.factor].rangeBadge.textContent.includes("Target")
+          });
+
+          applyManualInput("pollution", 95);
+          const lowHealth = state.health;
+          ui.serialInput.value = "light=78,temp=58,nutrients=74,pollution=6";
+          ui.applySerialBtn.click();
+          results.push({
+            check: "serial-input-recovers-health",
+            pass: state.health > lowHealth
+          });
+
+          results.push({
+            check: "serial-format-parses-photon-line",
+            pass:
+              state.inputs.light === 78 &&
+              state.inputs.temp === 58 &&
+              state.inputs.nutrients === 74 &&
+              state.inputs.pollution === 6
+          });
+
+          state.thriveScore = 120;
+          state.comboMultiplier = 1.8;
+          tickGame(Date.now() + 1000);
+          results.push({
+            check: "score-loop-runs",
+            pass: state.thriveScore >= 120
+          });
+
+          results.push({
+            check: "event-scheduler-set",
+            pass: state.nextEventAt >= initialEventAt || state.nextEventAt > Date.now()
+          });
+
+          state.inputs = { light: 0, temp: 100, nutrients: 0, pollution: 100 };
+          const visualResult = computeHealth(state.inputs, 0);
+          state.health = visualResult.health;
+          state.kelpState = visualResult.state;
+          render();
+          results.push({
+            check: "kelp-visual-updates-for-decay",
+            pass: ui.kelpCluster.classList.contains("state-decaying") && Number(ui.pollutionOverlay.style.opacity) > 0
+          });
+
+          const passed = results.every((item) => item.pass);
+          reportNode.hidden = false;
+          reportNode.textContent = JSON.stringify({ passed, results }, null, 2);
+        } catch (error) {
+          reportNode.hidden = false;
+          reportNode.textContent = JSON.stringify({
+            passed: false,
+            error: String(error)
+          }, null, 2);
+        }
+      }
+
+      populateBubbles();
+      bindEvents();
+      updateHardwareStatus();
+      restartRound();
+
+      if (new URLSearchParams(window.location.search).has("selftest")) {
+        window.setTimeout(runSelfTest, 200);
+      }
+    })();
+  </script>
+</body>
+</html>
